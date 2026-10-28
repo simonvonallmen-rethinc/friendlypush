@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  ftp-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload via FTPS
+        uses: SamKirkland/FTP-Deploy
+-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SE
+RVER }}
+          username: ${{ secrets.FTP_
+USERNAME }}
+          password: ${{ secrets.FTP_
+PASSWORD }}
+          protocol: ftps
+          server-dir: ${{ secrets.FT
+P_SERVER_DIR }}
+          local-dir: ./
+          dangerous-clean-slate: fal
+se
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+            **/.idea/**
+            dev/**
+            KONZEPT.md
+            README.md

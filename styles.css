@@ -532,8 +532,9 @@ body.is-home #app { padding: 0; }
 /* Zwei Kanten übereinander wären eine zu viel. */
 .screen-home .lp-band-green + .lp-band { border-top: 0; }
 
-/* Der Fuss trägt nur noch das Löschen und darf leise sein. */
-.screen-home-foot .lp-inner { padding: 28px 16px 36px; }
+/* Der Fuss trägt nur noch das Löschen. Er bleibt ohne eigene Fläche, damit er
+   mit der Fusszeile der Seite eine Zone bildet und nicht als Karte auftritt. */
+.screen-home-foot .lp-inner { padding: 28px 16px 24px; }
 
 
 /* ------------------------------------------------------------------ Landing */

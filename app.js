@@ -377,15 +377,6 @@ function showHome() {
       `Angefangene Einheit: ${state.active.done.length} von ${SLOTS.length} erledigt. Weiter geht es, wo du aufgehört hast.`
   }
 
-  // Der Verlauf ist Nebensache und steht ganz unten.
-  const run = store.streak(state)
-  if (state.history.length) {
-    view.slots.history.hidden = false
-    view.slots.streak.textContent = run > 0
-      ? (run === 1 ? 'Eine Woche am Stück.' : `${run} Wochen am Stück.`)
-      : 'Dreimal in einer Woche startet den Streak.'
-  }
-
   fillPrefs(view.slots.prefs)
   fillWipe(view.slots.wipe, showHome)
 

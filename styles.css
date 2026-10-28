@@ -1139,16 +1139,6 @@ button.exercise-card:active { transform: scale(0.995); }
 }
 
 
-/* ------------------------------------------------------------------ Verlauf */
-.history {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-  margin-top: 4px;
-}
-
 /* ------------------------------------------------------------------ Übung */
 /* Alles Bedienbare sitzt in einer festen Leiste unten am Daumen, der Inhalt
    steht darüber. Auf dem Handy ist das der Unterschied zwischen Tippen

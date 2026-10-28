@@ -2,7 +2,7 @@
 
 Haltungs-Mini-App. 10 Minuten, 3x pro Woche, gegen Rundrücken, vorgezogene Schultern und vorgekipptes Becken.
 
-Läuft auf **[friendlypush.ch](https://friendlypush.ch)**.
+Läuft auf **[friendlypush.ch](https://friendlypush.ch)**
 
 ## Was das ist
 
@@ -10,18 +10,21 @@ Ein Fun-Side-Projekt und Experiment: eine Fitness-App, die unterhaltsam ist und 
 
 ## Wie es gemacht ist
 
-- **Code**: vibe coded.
-- **Illustrationen**: handgezeichnet.
-- **Texte**: generiert.
+- **Code**: Vibe coded
+- **Illustrationen**: Handgezeichnet
+- **Texte**: Generiert
 - Insgesamt experimentell. Keine Garantie auf saubere Architektur, Tests oder Rückwärtskompatibilität.
 
 ## Stand und Ziel
 
-21 Übungen in 6 Funktions-Slots (Brustwirbelsäule, oberer Rücken, Schulterblatt, Hüftbeuger, Glutes und Core, Aufrichtung), pro Slot rotierende Varianten. Ziel ist, die Übungen weiter auszubauen: mehr Varianten pro Slot und Position (Boden / stehend), damit die Rotation länger abwechslungsreich bleibt.
+Work in progress. Grundgerüst und Konzept steht. Inhalt ist noch ein grosses TODO :) 
 
 ## Technik
 
-Statische PWA, kein Build, kein Framework. ES-Module, relative Pfade, Upload von Hand. Service Worker fragt immer zuerst das Netz, der Cache ist nur Offline-Reserve.
+Statische PWA, kein Build, kein Framework. Ziel möglichst ohne Hosting Gebühren, Datenbank, etc. Unt trotzdem spannende motivierende user flows :) 
+
+
+ES-Module, relative Pfade, Upload von Hand. Service Worker fragt immer zuerst das Netz, der Cache ist nur Offline-Reserve.
 
 Details zu Konzept, Entscheiden und Dateistruktur: [KONZEPT.md](KONZEPT.md).
 

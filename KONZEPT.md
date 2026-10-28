@@ -17,7 +17,7 @@ Stand: 2026-10-26. Entscheide aus dem Grill-Durchgang, Iteration 1 gebaut.
 | Session-Logik | 6 Funktions-Slots, pro Slot rotierende Varianten aus dem Pool |
 | Visualisierung | ein SVG-Skelett-Renderer, pro Übung 2 Posen plus Pfeile |
 | Flow | ein Screen pro Übung, Timer auf Tap, manuelles Weiter |
-| Erfolg | Wochenansicht als sieben Tage plus ein Satz zur Lage. Streak und 12-Wochen-Heatmap nur noch als Verlauf unten |
+| Erfolg | Wochenansicht als sieben Tage plus ein Satz zur Lage. Der Streak steht als Verlauf unten |
 | Equipment | Tags none / towel / band, Pool filtert, Default none |
 | Position | Tags floor / standing, pro Einheit umschaltbar (Zuhause / Überall) |
 | Dosierung | fix, keine Progression. Variantenreihenfolge im Slot geht leicht nach schwer |
@@ -126,9 +126,9 @@ Ohne lokalen Host gibt es keinen Editor: ein Werkzeug, dessen Ergebnis nirgends 
 - **Erste Einheit immer leicht.** `pickExercise` ignoriert den Slot-Offset bei `sessionCount === 0`, sonst startet die allererste Einheit in der Hälfte der Slots mit der schweren Variante.
 - **Abschluss unterscheidet den Grund.** Unter 4 von 6 heisst "Zählt noch nicht" mit Hinweis, zweite Einheit am selben Tag heisst "Heute schon erledigt".
 - **Einstieg erklärt sich.** Beim ersten Besuch zeigt die Startseite drei Schritte und das Paar mit offenem Platz statt eines leeren Wochenziels.
-- **Abschluss führt, statt zu berichten.** Oben der Push-Moment und genau ein Schritt, darunter erst Wochenziel, Streak und Heatmap. Der Vorname wird im eigenen Platz des Paares eingetragen, nicht in einem Feld darunter: dort steht er nachher, also wird er auch dort gesetzt. Ist er gesetzt, steht dort der Name und darunter eine leise Zeile zum Ändern. Solange er fehlt, wackelt das Feld kurz und der Knopf wartet abgeblendet; ab dem ersten Buchstaben steht er bereit, ohne dass erst aus dem Feld geklickt werden muss.
-- **Woche statt Bruchzahl.** Die Startseite zeigt die laufende Woche als sieben Tage und darunter einen Satz, was jetzt dran ist: "Heute erledigt. Noch 2 Einheiten diese Woche." oder "Noch 3 Einheiten, aber nur 2 Tage. Das wird knapp." Die Punktreihe 1/3 und die 12-Wochen-Heatmap als Hauptanzeige sind weg, die Heatmap steht unter "Verlauf" ganz unten.
-- **Push-Tage stehen im Kalender.** Die Tage aus `pushes` bekommen im Wochenkalender einen Stern und eine eigene Farbe, ein normaler Trainingstag nur einen Haken. Auf der Startseite steht eine Karte: entweder wer dich gepusht hat, oder wie viele Personen du motiviert hast.
+- **Abschluss führt, statt zu berichten.** Oben der Push-Moment und genau ein Schritt, direkt darunter der Weg zurück, erst danach Wochenziel und Streak. Der Vorname wird im eigenen Platz des Paares eingetragen, nicht in einem Feld darunter: dort steht er nachher, also wird er auch dort gesetzt. Ist er gesetzt, steht im Platz der Name und daneben ein Stift; eine Zeile "Du teilst als …" darunter braucht es dafür nicht. Solange er fehlt, nimmt das Feld beim Aufschlagen den Fokus, wackelt kurz und der Knopf wartet abgeblendet; ab dem ersten Buchstaben steht er bereit, ohne dass erst aus dem Feld geklickt werden muss.
+- **Woche statt Bruchzahl.** Die Startseite zeigt die laufende Woche als sieben Tage und darunter einen Satz, was jetzt dran ist: "Heute erledigt. Noch 2 Einheiten diese Woche." oder "Noch 3 Einheiten, aber nur 2 Tage. Das wird knapp." Die Punktreihe 1/3 und die 12-Wochen-Heatmap sind weg; unter "Verlauf" steht nur noch der Streak. `store.heatmap()` liegt weiter in `lib/store.js`, hat aber keinen Aufrufer mehr.
+- **Push-Tage stehen im Kalender.** Ein Tag aus `pushes` ist ein Trainingstag und einer mehr: er behält die Fläche des erledigten Tages und bekommt zum Haken den Stern dazu. Auf der Startseite steht eine Karte: entweder wer dich gepusht hat, oder wie viele Personen du motiviert hast.
 - **Bedienung unten.** Im Übungsmodus sitzen Fortschritt, Dosis und Schritte in einer festen Leiste am unteren Rand, der Inhalt steht darüber. Die Dosis hat eine eigene Zeile über den Schritten und zwei Formen: eine Zeitvorgabe ist erhaben und antippbar, der Füllstand läuft als Balken durch die Zeile; Wiederholungen liegen flach in der Slotfarbe und sind kein Bedienelement. Überspringen ist aus der Leiste in den Kopf der Übung gewandert, oben rechts, nur als Icon.
 - **Icons aus Phosphor.** Phosphor Regular (MIT), als Inline-Sprite in `index.html` statt vom CDN, damit die App ohne Netz und ohne Abhängigkeit läuft. Sechs Symbole: FastForward, ArrowLeft, Play, Pause, Check, Repeat.
 - **Rückwärts in der Einheit.** Ein Pfeil links neben dem Weiter-Knopf springt eine Übung zurück, bei der ersten ist er ausgeblendet. Übersprungene Übungen stehen in `active.skipped` und erscheinen im Fortschritt transparent gefüllt: angefasst, aber nicht abgehakt.
@@ -158,7 +158,7 @@ Ohne lokalen Host gibt es keinen Editor: ein Werkzeug, dessen Ergebnis nirgends 
 
 ## Landing
 
-Der Marketing-Einstieg, ein eigener Screen in derselben Datei. Er läuft, wenn kein Link im Hash steht, die History leer ist und die App im Browser statt installiert geöffnet wurde. Ab der ersten Einheit beginnt der Besuch auf der Übersicht; wer ihn nochmal sehen will, findet unter der Übersicht die Zeile "Wie friendly push funktioniert".
+Der Marketing-Einstieg, ein eigener Screen in derselben Datei. Er läuft, wenn kein Link im Hash steht, die History leer ist und die App im Browser statt installiert geöffnet wurde. Ab der ersten Einheit beginnt der Besuch auf der Übersicht; wer ihn nochmal sehen will, nimmt das Fragezeichen oben rechts.
 
 Aufbau: Claim und Startknopf, der Push als eigene Fläche, drei Punkte zu dem, was die App nicht tut, warum Haltung kaputtgeht, die drei Schritte, die Installation, die Fragen, ein letzter Startknopf. Die sechs Bereiche standen hier auch einmal; das Band ist weg, die Übersicht der Bereiche steht in der Bibliothek. Breiter als die App und ab 720 Pixel mit der Illustration neben dem Text: er wird gelesen, nicht bedient.
 

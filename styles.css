@@ -82,7 +82,7 @@
 /* ------------------------------------------------------------------ Basis */
 * { box-sizing: border-box; }
 
-/* .goal und .heatmap setzen display, das schlägt sonst das hidden-Attribut. */
+/* Manche Bausteine setzen display, das schlägt sonst das hidden-Attribut. */
 [hidden] { display: none !important; }
 
 /* Icons: Phosphor-Symbole aus dem Sprite in index.html. Sie messen in em,
@@ -245,8 +245,9 @@ h1 {
 
   /* Textknöpfe haben keine Fläche, die heller werden könnte. Sie bekommen
      die Unterstreichung, die ein Link im Fliesstext ohnehin trägt. */
-  .linkbtn:hover,
-  .byline button:hover {
+  .peer-edit:hover { opacity: 1; }
+
+  .linkbtn:hover {
     color: var(--ink);
     text-decoration: underline;
     text-underline-offset: 3px;
@@ -399,17 +400,22 @@ h1 {
   padding-top: 18px;
 }
 
-.byline { display: flex; align-items: baseline; gap: 8px; }
-
-.byline button {
-  transition: color 120ms ease;
+/* Der Stift am eigenen Namen. Er steht immer da, solange der Name nur
+   dasteht: ohne ihn wäre nicht zu sehen, dass er zu ändern ist. Leise, er
+   ist ein Angebot und nicht der Schritt, auf den der Screen zuläuft. */
+.peer-edit {
+  transition: opacity 120ms ease;
   appearance: none;
+  display: grid;
+  place-items: center;
+  margin: -4px -6px -4px 1px;
+  padding: 4px 6px;
   background: none;
   border: 0;
-  padding: 0;
-  font: inherit;
-  color: var(--accent-text);
-  text-decoration: underline;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.6;
   cursor: pointer;
 }
 
@@ -664,6 +670,22 @@ body.is-landing #app { padding: 0; }
 /* Die Woche als sieben Felder, zwei davon erledigt. Angedeutet, nicht
    nachgebaut: mehr als die Form ist hinter dem vorderen Gerät nicht zu
    sehen. */
+.lp-phone .pair { gap: 0; }
+
+.lp-phone .peer {
+  gap: 5px;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+
+.lp-phone .peer b {
+  width: 13px;
+  height: 13px;
+  font-size: 8px;
+}
+
+.lp-phone .pair-link { flex-basis: 14px; }
+
 .lp-phone-week { display: flex; gap: 5px; }
 
 .lp-phone-week i {
@@ -1008,7 +1030,7 @@ body.has-help .helpbtn { display: grid; }
 /* Die Meldung über die neue Fassung sitzt am selben Platz und ist wichtiger. */
 body.has-toast .helpbtn { display: none; }
 
-/* ------------------------------------------------------------------ Ziel und Heatmap */
+/* ------------------------------------------------------------------ Ziel */
 /* Die Woche als sieben Tage, nicht als Bruchzahl: man soll sehen, wie viel
    Woche noch da ist, nicht nur wie viel Soll noch offen ist. */
 .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
@@ -1038,33 +1060,11 @@ body.has-toast .helpbtn { display: none; }
 }
 .day[data-done] i { color: inherit; opacity: 0.75; }
 
-/* Ein Tag, an dem ein Push rausging, ist mehr als ein Trainingstag. */
-.day[data-push] {
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-  color: var(--accent-text);
-}
-.day[data-push] b { font-size: 15px; }
+/* Ein Tag, an dem ein Push rausging, ist mehr als ein Trainingstag: er
+   behält die Fläche des erledigten Tages und bekommt den Stern dazu. */
+.day[data-push] b { font-size: 12px; letter-spacing: 0.5px; }
 
 .weekline { margin: 0; font-size: 17px; font-weight: 600; text-wrap: pretty; }
-
-.heatmap {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 5px;
-}
-
-.heatmap i {
-  display: block;
-  aspect-ratio: 1;
-  border-radius: 7px;
-  background: var(--line);
-  opacity: 0.55;
-}
-
-.heatmap i[data-count="1"] { background: color-mix(in oklab, var(--accent-text) 32%, var(--line)); opacity: 1; }
-.heatmap i[data-count="2"] { background: color-mix(in oklab, var(--accent-text) 62%, var(--line)); opacity: 1; }
-.heatmap i[data-count="3"] { background: var(--accent-text); opacity: 1; }
-.heatmap i[data-current] { outline: 2px solid var(--ink-soft); outline-offset: 2px; }
 
 /* ------------------------------------------------------------------ Übungsliste */
 .topbar {
@@ -1551,6 +1551,8 @@ body.has-bar .footer { display: none; }
   font-size: 20px;
   line-height: 1;
 }
+
+.ex-stop { border-radius: 999px; }
 
 /* ------------------------------------------------------------------ Fortschritt */
 .progress { display: flex; gap: 6px; flex: 1; }

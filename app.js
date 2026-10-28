@@ -604,8 +604,16 @@ function showExercise() {
     advance()
   })
   // Bei der ersten Übung gibt es nichts, wohin der Pfeil zeigen könnte.
+  // An seiner Stelle steht dort der Abbruch: wer gerade gestartet hat und
+  // zurück will, meint die Übersicht und nicht eine Übung weiter hinten.
+  const first = slotIndex === 0
   const prev = on(view.root, 'prev', back)
-  if (prev) prev.hidden = slotIndex === 0
+  if (prev) prev.hidden = first
+  const stop = on(view.root, 'stop', () => {
+    store.discardSession()
+    showHome()
+  })
+  if (stop) stop.hidden = !first
 
   mount(view, 'exercise')
 }
@@ -653,9 +661,8 @@ function showDone() {
     : 'Dreimal in einer Woche startet den Streak.'
 
   // Ohne Namen steht im eigenen Platz des Paares das Feld, mit Namen der
-  // Name und darunter die Zeile zum Ändern.
+  // Name und daneben der Stift.
   view.editName = !state.name
-  showByline(view)
 
   renderPushStep(view)
 
@@ -667,9 +674,13 @@ function showDone() {
     showHome()
   })
   mount(view, 'done')
-  // Erst im Dokument läuft eine Animation. Wer noch keinen Namen gesetzt hat,
-  // sieht darum hier, wo der eine fehlende Schritt sitzt.
-  if (view.editName) shakeName(view)
+  // Erst im Dokument läuft eine Animation und nimmt ein Feld den Fokus. Wer
+  // noch keinen Namen gesetzt hat, sieht darum hier, wo der eine fehlende
+  // Schritt sitzt, und tippt ihn ohne Umweg ein.
+  if (view.editName) {
+    shakeName(view)
+    view.slots.pair.querySelector('.peer-input')?.focus()
+  }
 }
 
 /**
@@ -703,6 +714,7 @@ function renderPair(view) {
       done: true,
       you: true,
       el: view.editName ? nameInput(view) : null,
+      edit: view.editName ? null : () => editName(view),
     },
     { name: 'wer macht mit?', pending: true },
   ])
@@ -727,7 +739,7 @@ function showPushSent(view, result) {
 
   view.slots.share.replaceChildren()
   fillPair(view.slots.pair, [
-    { name: myLabel(state), done: true, you: true },
+    { name: myLabel(state), done: true, you: true, edit: () => editName(view) },
     { name: sent ? 'unterwegs' : 'Link bereit', done: true },
   ])
   view.slots.sharehow.textContent = sent
@@ -791,7 +803,6 @@ function nameInput(view) {
     store.setName(el.value)
     const named = Boolean(store.load().name)
     if (named) view.editName = false
-    showByline(view)
     renderPair(view)
     syncPush(view)
     if (!named) shakeName(view)
@@ -817,25 +828,8 @@ function shakeName(view) {
 /** Das Feld aufmachen und den Cursor hineinsetzen. */
 function editName(view) {
   view.editName = true
-  showByline(view)
   renderPair(view)
   view.slots.pair.querySelector('.peer-input')?.focus()
-}
-
-/** Gesetzter Name: Zeile mit Änderungsmöglichkeit statt offenem Feld. */
-function showByline(view) {
-  const name = store.load().name
-  view.slots.byline.hidden = !name || view.editName
-  if (view.slots.byline.hidden) return
-
-  view.slots.byline.replaceChildren()
-  const text = document.createElement('span')
-  text.textContent = `Du teilst als ${name}.`
-  const change = document.createElement('button')
-  change.type = 'button'
-  change.textContent = 'ändern'
-  change.addEventListener('click', () => editName(view))
-  view.slots.byline.append(text, change)
 }
 
 function revealSidequest(view, note) {

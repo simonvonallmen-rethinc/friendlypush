@@ -1,0 +1,13 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Aus Figma, Frame "Html → Body" (node 31:14382). -->
+<g id="kein-konto" clip-path="url(#clip0_31_15213)">
+<path id="Vector" d="M10 0H30C35.5228 0 40 4.47715 40 10V30C40 35.5228 35.5228 40 30 40H10C4.47715 40 0 35.5228 0 30V10C0 4.47715 4.47715 0 10 0V0" fill="#EAE4E7"/>
+<path id="Vector_2" d="M15 15.8333C15 18.5929 17.2404 20.8333 20 20.8333C22.7596 20.8333 25 18.5929 25 15.8333C25 13.0738 22.7596 10.8333 20 10.8333C17.2404 10.8333 15 13.0738 15 15.8333V15.8333" stroke-width="2.08333" stroke="#2F6F5E"/>
+<path id="Vector_3" d="M10.8333 30.8333C10.8333 25.7741 14.9408 21.6667 20 21.6667C25.0592 21.6667 29.1667 25.7741 29.1667 30.8333" stroke-width="2.08333" stroke-linecap="round" stroke="#2F6F5E"/>
+</g>
+<defs>
+<clipPath id="clip0_31_15213">
+<rect width="40" height="40" fill="white"/>
+</clipPath>
+</defs>
+</svg>

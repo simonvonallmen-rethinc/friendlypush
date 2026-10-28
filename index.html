@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Zehn Minuten gegen den Rundrücken. Dreimal die Woche, dann weitergeben.">
+<title>friendly push</title>
+<link rel="stylesheet" href="styles.css">
+
+<!-- Als App installierbar: Manifest, Icons, und ein Service Worker, den
+     app.js anmeldet. Die Farbe der Systemleiste folgt dem Modus. -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#fbf8f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171412" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<!-- iOS liest kein Manifest. Was dort zählt, steht in diesen drei Zeilen. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="friendly push">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- Vorschau, wenn der Link in einem Chat landet. Relative Pfade, weil der
+     Host noch offen ist; nach dem Deploy gehören hier absolute hin. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="friendly push">
+<meta property="og:description" content="Zehn Minuten gegen den Rundrücken. Dreimal die Woche, dann weitergeben.">
+<meta property="og:image" content="assets/icon-512.png">
+<meta name="twitter:card" content="summary">
+<body>
+
+<!-- Icons: Phosphor Regular, MIT, https://phosphoricons.com. Inline statt vom CDN,
+     damit die App ohne Netz und ohne Abhängigkeit läuft. -->
+<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-skip" viewBox="0 0 256 256"><path d="M248.67,114.66,160.48,58.5A15.91,15.91,0,0,0,136,71.84v37.3L56.48,58.5A15.91,15.91,0,0,0,32,71.84V184.16A15.92,15.92,0,0,0,56.48,197.5L136,146.86v37.3a15.92,15.92,0,0,0,24.48,13.34l88.19-56.16a15.8,15.8,0,0,0,0-26.68ZM48,183.94V72.07L135.82,128Zm104,0V72.07L239.82,128Z"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 256 256"><path d="M232.4,114.49,88.32,26.35a16,16,0,0,0-16.2-.3A15.86,15.86,0,0,0,64,39.87V216.13A15.94,15.94,0,0,0,80,232a16.07,16.07,0,0,0,8.36-2.35L232.4,141.51a15.81,15.81,0,0,0,0-27ZM80,215.94V40l143.83,88Z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 256 256"><path d="M200,32H160a16,16,0,0,0-16,16V208a16,16,0,0,0,16,16h40a16,16,0,0,0,16-16V48A16,16,0,0,0,200,32Zm0,176H160V48h40ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Zm0,176H56V48H96Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+  <symbol id="i-caret" viewBox="0 0 256 256"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 256 256"><path d="M24,128A72.08,72.08,0,0,1,96,56H204.69L194.34,45.66a8,8,0,0,1,11.32-11.32l24,24a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32-11.32L204.69,72H96a56.06,56.06,0,0,0-56,56,8,8,0,0,1-16,0Zm200-8a8,8,0,0,0-8,8,56.06,56.06,0,0,1-56,56H51.31l10.35-10.34a8,8,0,0,0-11.32-11.32l-24,24a8,8,0,0,0,0,11.32l24,24a8,8,0,0,0,11.32-11.32L51.31,200H160a72.08,72.08,0,0,0,72-72A8,8,0,0,0,224,120Z"/></symbol>
+</svg>
+
+<main id="app" aria-live="polite"></main>
+
+<footer class="footer">
+  Bei Schmerzen abbrechen. Kein medizinischer Rat.<br>
+  Made with love and some help of AI.
+</footer>
+
+<!-- Eine neue Fassung wird angeboten, nicht untergeschoben: mitten in einer
+     Einheit neu zu laden wäre ein Abbruch. -->
+<div class="toast" data-slot="update" role="status" hidden>
+  <span>Neue Fassung bereit.</span>
+  <button class="btn btn-small btn-primary" data-action="reload">Neu laden</button>
+</div>
+
+<!-- Die Erklärung bleibt erreichbar, auch wenn die App längst läuft: ein
+     Fragezeichen oben rechts. Im Training und auf der Erklärung selbst steht
+     es nicht da, dort führt es nirgends hin. -->
+<button class="helpbtn" data-action="help" title="So funktioniert friendly push"
+        aria-label="So funktioniert friendly push">?</button>
+
+<!-- ------------------------------------------------- Landing -->
+<!-- Der Einstieg für alle, die die App noch nicht kennen, und ab dem
+     Fragezeichen die Erklärung für alle anderen: was die App tut, wie sie
+     bedient wird, was häufig gefragt wird, wie sie auf den Homescreen kommt.
+     Darum steht hier alles und nicht nur das Nötigste. -->
+<template id="screen-landing">
+  <!-- Der Einstieg und gleichzeitig die Erklärung. Er ist in Bänder
+       geschnitten: ein Thema pro Band, über die ganze Breite, abwechselnd
+       getönt. Die Kante trennt, nicht der Abstand, und die Kopfzeile springt
+       zu den drei Stellen, die man im Betrieb sucht. -->
+  <section class="screen screen-landing">
+
+    <!-- Die Kopfzeile klebt oben: auf einer Seite dieser Länge soll der Weg
+         zurück nicht erst zurückgescrollt werden müssen. -->
+    <div class="lp-navbar">
+      <nav class="lp-nav">
+        <!-- Das Zeichen ist zugleich der Weg zurück, wenn es ein Zurück gibt:
+             beim ersten Besuch ist diese Seite der Anfang. Einen eigenen Pfeil
+             trägt die Kopfzeile nicht mehr, app.js macht das Zeichen
+             antippbar. -->
+        <p class="eyebrow brand lp-brand" data-slot="brand">
+          <img class="lp-logo" src="assets/icon.svg" alt="" aria-hidden="true">
+          friendly push <span class="tag">beta</span>
+        </p>
+        <div class="lp-jump">
+          <button class="linkbtn" data-action="jump" data-to="steps">So geht's</button>
+          <button class="linkbtn" data-action="jump" data-to="faq">Fragen</button>
+          <button class="linkbtn" data-action="jump" data-to="installblock">Installieren</button>
+        </div>
+        <button class="btn btn-primary lp-navcta" data-action="start">App Starten</button>
+      </nav>
+    </div>
+
+    <header class="lp-band lp-band-hero">
+      <div class="lp-inner lp-hero">
+        <div class="lp-hero-text">
+          <p class="note lp-badges">Kein Konto · Keine Daten · Gratis</p>
+          <h1>Zehn Minuten gegen den Rundrücken.</h1>
+          <p class="lp-claim">Sechs Übungen, dreimal die Woche. Danach gibst du einer
+            Person den Push weiter. Das ist die ganze App.</p>
+          <div class="lp-cta">
+            <button class="btn btn-primary" data-action="start">Jetzt starten, 10 Minuten</button>
+            <button class="btn btn-soft" data-action="install" hidden>Auf den Homescreen</button>
+          </div>
+        </div>
+
+        <!-- Statt eines Bildes die App selbst, in einem Rahmen: ein
+             Übungsscreen mit laufendem Timer. Kein Screenshot, sondern
+             dieselben Bausteine und Farben, damit das Mockup nicht veraltet,
+             wenn die App sich ändert. Bedienbar ist nichts davon.
+
+             Dahinter steht gekippt ein zweites Gerät mit dem Abschluss: zwei
+             Momente derselben Einheit, das Training und das Weitergeben. Es
+             ist angeschnitten und reine Dekoration, darum ohne Beschriftung
+             und auf schmalen Geräten gar nicht erst da. -->
+        <div class="lp-phones">
+          <div class="lp-phone lp-phone-back" aria-hidden="true">
+            <div class="lp-phone-screen">
+              <div class="lp-phone-head">
+                <p class="eyebrow">🎉 Geschafft</p>
+                <b>Heute schon erledigt.</b>
+              </div>
+              <p class="lp-phone-line">Jetzt gibst du den Push weiter. Ein Link an eine
+                Person, das war es.</p>
+              <div class="pair">
+                <span class="peer" data-done data-you><b>✓</b><span>Du</span></span>
+                <span class="pair-link"></span>
+                <span class="peer" data-pending><b>·</b><span>Eine Person</span></span>
+              </div>
+              <div class="lp-phone-next">Eine Person motivieren</div>
+              <div class="lp-phone-week">
+                <i></i><i data-on></i><i></i><i></i>
+              </div>
+            </div>
+          </div>
+          <div class="lp-phone" role="img"
+               aria-label="Die App während einer Übung: Halber Kniestand, der Timer läuft, 42 Sekunden übrig, vier von sechs Übungen.">
+            <div class="lp-phone-screen" aria-hidden="true">
+              <div class="lp-phone-head">
+                <p class="eyebrow">Hüftbeuger</p>
+                <b>Halber Kniestand</b>
+              </div>
+              <div class="lp-phone-figure">
+                <img src="uebungen/hipflexor-halber-kniestand/illustration.svg" alt="">
+              </div>
+              <div class="lp-phone-bar">
+                <div class="progress">
+                  <i data-on></i><i data-on></i><i data-on></i><i data-now></i><i></i><i></i>
+                </div>
+                <div class="lp-phone-timer">
+                  <span class="lp-phone-fill"></span>
+                  <svg class="icon lp-phone-icon"><use href="#i-pause"></use></svg>
+                  <span class="lp-phone-time">42</span>
+                  <span class="lp-phone-note">Antippen zum Stoppen</span>
+                </div>
+                <div class="lp-phone-next"><span>4/6</span> Weiter</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Der Kern zuerst, direkt unter dem Hero: er ist der Grund, warum es
+         die App gibt, nicht eine Eigenschaft unter anderen. -->
+    <section class="lp-band lp-band-teal">
+      <div class="lp-inner">
+        <h2>Der friendly push.</h2>
+        <div class="pair" data-slot="pair"></div>
+        <p class="lead">Du trainierst, du schickst einer Person einen Link. Es kommt
+          nichts zurück und es gibt nichts abzuschliessen. Keine Gruppe, keine
+          Rangliste, keine Erinnerung, die dich schlecht fühlen lässt. Nur eine
+          Person, die du an dem Tag mitziehst.</p>
+      </div>
+    </section>
+
+    <section class="lp-band lp-band-soft">
+      <div class="lp-inner">
+        <h2>Drei Dinge, die hier fehlen.</h2>
+        <!-- Pro Karte ein Icon. Die Dateien in assets/ sind Platzhalter im
+             Rahmen 96x96, zum Austauschen gegen die Zeichnungen aus Figma. -->
+        <div class="lp-facts">
+          <div>
+            <img class="lp-fact-icon" src="assets/lp-fact-konto.svg" alt="" aria-hidden="true">
+            <b>Kein Konto.</b><span>Nichts anzumelden, nichts zu bestätigen.
+            Aufmachen und loslegen.</span>
+          </div>
+          <div>
+            <img class="lp-fact-icon" src="assets/lp-fact-daten.svg" alt="" aria-hidden="true">
+            <b>Keine Daten.</b><span>Dein Verlauf bleibt auf dem Gerät. Kein
+            Server, keine Analytics, keine Fonts von aussen.</span>
+          </div>
+          <div>
+            <img class="lp-fact-icon" src="assets/lp-fact-kosten.svg" alt="" aria-hidden="true">
+            <b>Keine Kosten.</b><span>Keine Werbung, kein Abo, nichts, was
+            später freigeschaltet werden will.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-band lp-band-brick">
+      <div class="lp-inner">
+        <p class="eyebrow">Warum</p>
+        <h2>Acht Stunden am Pult hinterlassen Spuren.</h2>
+        <p class="lead">Rundrücken, vorgezogene Schultern, ein vorgekipptes Becken.
+          Nichts davon kommt über Nacht, und nichts davon geht über Nacht weg. Es
+          braucht eine Gewohnheit, kein Programm. Zehn Minuten sind kurz genug,
+          dass man sie wirklich macht.</p>
+      </div>
+    </section>
+
+    <section class="lp-band lp-band-soft" data-slot="steps">
+      <div class="lp-inner">
+        <p class="eyebrow">So geht's</p>
+        <h2>Drei Schritte, so einfach.</h2>
+        <ol class="steps">
+          <li><span>
+            <b>10 Minuten Zeit nehmen, das geht immer!</b>
+            Kein Umziehen, kein Gerät, keine Vorbereitung. Zwischen zwei
+            Terminen reicht es.
+          </span></li>
+          <li><span>
+            <b>Übungen machen.</b>
+            Sechs Stück, eine pro Bildschirm, Ansage dazu, Timer auf Tipp. Du
+            legst das Handy hin und machst mit.
+          </span></li>
+          <li><span>
+            <b>Eine Person motivieren.</b>
+            Ein Link an jemanden deiner Wahl. Mehr ist es nicht: wer mitmacht,
+            gibt den Push beim nächsten Mal selber weiter.
+          </span></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="lp-band lp-band-plum" data-slot="installblock">
+      <!-- Das Bild steht links, der Text behält seine Spalte daneben. Auf dem
+           Handy fehlt die Breite dafür, dort steht das Bild darüber. -->
+      <div class="lp-inner lp-side">
+        <img class="lp-side-icon" src="assets/lp-install.svg" alt="" aria-hidden="true">
+        <div class="lp-side-text">
+          <p class="eyebrow">Installieren</p>
+          <h2>Wie eine App, ohne App Store.</h2>
+          <p class="lead" data-slot="installhow"></p>
+          <div class="lp-cta">
+            <button class="btn btn-primary" data-action="install" hidden>Auf den Homescreen legen</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-band" data-slot="faq">
+      <div class="lp-inner">
+        <p class="eyebrow">Fragen</p>
+        <h2>Was sonst noch gefragt wird.</h2>
+        <div class="faq">
+          <details>
+            <summary>Wo liegen meine Daten?
+              <svg class="icon faq-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <p>Im Speicher deines Browsers, auf diesem Gerät, als ein einziger
+              Eintrag. Es gibt keinen Server, der etwas davon sieht. Löschst du
+              die Browserdaten oder die installierte App, ist der Verlauf weg.
+              Löschen kannst du alles hier oder am Ende der Übersicht.</p>
+            <div class="wipe" data-slot="wipe"></div>
+          </details>
+          <details>
+            <summary>Was steckt in dem Link, den ich schicke?
+              <svg class="icon faq-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <p>Dein Vorname und die sechs Übungen von heute, codiert im Link
+              selbst. Wer ihn öffnet, sieht, dass du trainiert hast, und bekommt
+              dieselbe Einheit angeboten. Es wird nichts gespeichert und es kommt
+              nichts zurück.</p>
+          </details>
+          <details>
+            <summary>Funktioniert sie offline?
+              <svg class="icon faq-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <p>Ja, nach dem ersten Laden. Die Zeichnungen aller Übungen holt die
+              App im Hintergrund dazu, nicht nur die der heutigen Einheit. Im Zug
+              ohne Empfang läuft die Einheit darum genauso.</p>
+          </details>
+          <details>
+            <summary>Wie kommt eine neue Fassung zu mir?
+              <svg class="icon faq-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <p>Von selbst. Liegt eine bereit, meldet sich oben «Neue Fassung
+              bereit», und du lädst neu, wenn es dir passt. Mitten in einer
+              Einheit wird nichts untergeschoben.</p>
+          </details>
+          <details>
+            <summary>Muss es wirklich dreimal die Woche sein?
+              <svg class="icon faq-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <p>Drei Einheiten von Montag bis Sonntag sind das Ziel. Eine Einheit
+              pro Tag zählt. Es gibt keine Erinnerung, keine Benachrichtigung und
+              nichts, was einen verpassten Tag nachträgt.</p>
+          </details>
+          <details>
+            <summary>Was, wenn ich eine Übung nicht machen kann?
+              <svg class="icon faq-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <p>Überspringen, oben rechts. Wer gar nicht auf den Boden mag, stellt
+              vor dem Start auf «Nur im Stehen» um. Für einzelne Bereiche gibt es
+              noch keine Übung im Stehen, dort bleibt es am Boden.</p>
+          </details>
+          <details>
+            <summary>Ist das medizinischer Rat?
+              <svg class="icon faq-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <p>Nein. Sechs Übungen gegen die Folgen vom Sitzen, nicht mehr. Bei
+              Schmerzen abbrechen, bei anhaltenden Beschwerden zu jemandem gehen,
+              der dich anschauen kann.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-band lp-band-teal">
+      <div class="lp-inner lp-side lp-final">
+        <img class="lp-side-icon" src="assets/lp-final.svg" alt="" aria-hidden="true">
+        <div class="lp-side-text">
+          <h2>Zehn Minuten. Jetzt.</h2>
+          <div class="lp-cta">
+            <button class="btn btn-primary" data-action="start">Einheit starten</button>
+            <button class="btn btn-quiet" data-action="library">Erst die Übungen ansehen</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </section>
+</template>
+
+<!-- ------------------------------------------------- Einladung -->
+<template id="screen-invite">
+  <section class="screen">
+    <p class="eyebrow brand">friendly push <span class="tag">beta</span></p>
+    <h1 data-slot="headline"></h1>
+    <div class="pair" data-slot="pair"></div>
+    <p class="lead" data-slot="lead"></p>
+    <div class="prefs" data-slot="prefs"></div>
+    <button class="btn btn-primary" data-action="start" data-slot="startbtn">Mitmachen, 10 Minuten</button>
+    <button class="btn btn-quiet" data-action="start-own" data-slot="startown" hidden>Lieber mein eigenes Set</button>
+    <p class="note">Sechs Übungen gegen Rundrücken, vorgezogene Schultern und ein vorgekipptes Becken.</p>
+  </section>
+</template>
+
+<!-- ------------------------------------------------------- Vor dem Start -->
+<template id="screen-ready">
+  <!-- Derselbe Aufbau wie eine Übung: Kopf, Fläche, Knöpfe unten. Die Figur
+       steht damit schon hier an der Stelle und in der Grösse, an der sie
+       gleich die ganze Einheit über steht. -->
+  <section class="screen screen-ready">
+    <div class="ex-body">
+      <header class="ex-head">
+        <div class="ex-head-text">
+          <p class="eyebrow">🚀</p>
+          <h1 data-slot="headline">Ready?</h1>
+        </div>
+      </header>
+
+      <div class="ex-main">
+        <div class="ex-figure" data-illu>
+          <img class="ex-illu" src="uebungen/_app/ready.svg" alt="" aria-hidden="true">
+        </div>
+        <p class="lead" data-slot="lead"></p>
+      </div>
+    </div>
+
+    <div class="ready-actions">
+      <button class="btn btn-primary" data-action="go">Training starten</button>
+      <button class="btn btn-quiet" data-action="cancel">Abbrechen</button>
+    </div>
+  </section>
+</template>
+
+<!-- ------------------------------------------------- Einstieg ohne Link -->
+<template id="screen-home">
+  <section class="screen screen-home">
+    <p class="eyebrow brand">friendly push <span class="tag">beta</span></p>
+    <h1 data-slot="headline">Zehn Minuten für deinen Rücken</h1>
+
+    <div class="intro" data-slot="intro" hidden>
+      <ol class="steps">
+        <li><span>
+          <b>Zehn Minuten, sechs Übungen.</b>
+          Gegen Rundrücken, vorgezogene Schultern und ein vorgekipptes Becken.
+        </span></li>
+        <li><span>
+          <b>Dreimal die Woche.</b>
+          Mehr braucht es nicht. Was du geschafft hast, merkt sich die App von selbst.
+        </span></li>
+        <li><span>
+          <b>Danach motivierst du eine Person.</b>
+          Ein Link an jemanden deiner Wahl. Mehr ist es nicht: wer mitmacht, gibt den
+          Push beim nächsten Mal selber weiter.
+        </span></li>
+      </ol>
+      <div class="pair" data-slot="demo"></div>
+    </div>
+
+    <div class="week" data-slot="week" data-hide-on-intro role="img" data-label=""></div>
+    <p class="weekline" data-slot="weekline" data-hide-on-intro></p>
+
+    <div class="pushcard" data-slot="pushcard" hidden>
+      <div class="pair" data-slot="pushpair"></div>
+      <p data-slot="pushnote"></p>
+    </div>
+
+    <div class="prefs" data-slot="prefs"></div>
+
+    <button class="btn btn-primary" data-action="start" data-slot="startbtn">Einheit starten</button>
+    <p class="note" data-slot="resume" hidden></p>
+
+    <button class="btn btn-quiet" data-action="library">Alle Übungen ansehen</button>
+
+    <div class="history" data-slot="history" hidden>
+      <p class="eyebrow">Verlauf</p>
+      <p class="note" data-slot="streak"></p>
+    </div>
+
+    <!-- Alles löschen steht am Ende der Übersicht: es gehört dorthin, wo die
+         Daten liegen, nicht in die Erklärung. -->
+    <div class="wipe" data-slot="wipe"></div>
+  </section>
+</template>
+
+<!-- ------------------------------------------------- Übung -->
+<template id="screen-exercise">
+  <section class="screen screen-exercise">
+    <div class="ex-body">
+      <header class="ex-head">
+        <div class="ex-head-text">
+          <p class="eyebrow" data-slot="slot"></p>
+          <h1 data-slot="name"></h1>
+        </div>
+        <!-- Überspringen gehört zum Kopf der Übung, nicht zur Daumenleiste. -->
+        <button class="linkbtn ex-skip" data-action="skip" aria-label="Übung überspringen" title="Überspringen">
+          <svg class="icon" aria-hidden="true"><use href="#i-skip"></use></svg>
+        </button>
+      </header>
+
+      <div class="ex-main">
+        <div class="ex-figure" data-slot="figure"></div>
+        <!-- Die Anleitung ist eine Schublade: auf niedrigen Screens zu, damit
+             die Figur den Platz hat. Aufgeklappt schrumpft die Figur, der
+             Screen wird nicht länger: lesen soll kein Scrollen kosten. -->
+        <div class="ex-cue" data-slot="drawer">
+          <button class="ex-cue-toggle" data-action="cue"
+                  aria-expanded="false" aria-controls="ex-cue-text">
+            <span>Anleitung</span>
+            <svg class="icon ex-cue-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+          </button>
+          <div class="ex-cue-body">
+            <p class="cue" id="ex-cue-text" data-slot="cue"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alles Bedienbare sitzt unten am Daumen, der Rest scrollt darüber. -->
+    <div class="ex-bar">
+      <div class="ex-bar-top">
+        <div class="progress" data-slot="progress" role="img" data-label=""></div>
+      </div>
+      <!-- Die Dosis steht auf einer eigenen Zeile über den Schritten: Zeit läuft
+           und ist antippbar, Wiederholungen sind nur eine Angabe. -->
+      <div class="ex-dose">
+        <button class="timer" data-action="timer" aria-live="off" hidden>
+          <span class="timer-fill" aria-hidden="true"></span>
+          <svg class="icon timer-icon" aria-hidden="true"><use data-slot="timericon" href="#i-play"></use></svg>
+          <span class="timer-label" data-slot="timer"></span>
+          <span class="timer-note" data-slot="timernote"></span>
+        </button>
+        <p class="reps" data-slot="reps" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-repeat"></use></svg>
+          <span class="reps-count" data-slot="repscount"></span>
+          <span class="reps-note">Wiederholungen</span>
+        </p>
+      </div>
+
+      <div class="ex-bar-main">
+        <button class="btn btn-soft ex-prev" data-action="prev" aria-label="Eine Übung zurück">
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+        </button>
+        <button class="btn btn-soft ex-prev ex-stop" data-action="stop"
+                aria-label="Einheit abbrechen" title="Abbrechen" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+        </button>
+        <button class="btn btn-primary ex-next" data-action="next">
+          <span data-slot="step"></span>
+          Weiter
+        </button>
+      </div>
+    </div>
+  </section>
+</template>
+
+<!-- ------------------------------------------------- Abschluss -->
+<template id="screen-done">
+  <section class="screen screen-done">
+    <p class="cheer" data-slot="cheer" hidden aria-hidden="true">🎉</p>
+    <p class="eyebrow" data-slot="eyebrow">Geschafft</p>
+    <h1 data-slot="headline"></h1>
+    <p class="note" data-slot="hint" hidden></p>
+
+    <!-- Wer über einen Link hier ist, schuldet der Person zwei Sachen:
+         eine Rückmeldung und beim nächsten Mal den Push. -->
+    <p class="pushback" data-slot="pushback" hidden></p>
+
+    <div class="pair" data-slot="pair"></div>
+    <p class="note" data-slot="sharehow"></p>
+
+    <div class="share" data-slot="share"></div>
+
+    <!-- Konfetti sitzt in einer Zeile ohne Höhe, damit der Ausbruch nichts verschiebt. -->
+    <div class="party" data-slot="party" hidden aria-hidden="true"></div>
+    <p class="status" data-slot="status" role="status"></p>
+
+    <!-- Nach dem Push nur noch eine leise Zeile, kein zweiter Aufruf. -->
+    <p class="sidequest" data-slot="sidequest" hidden>
+      <span data-slot="sidenote"></span>
+      <button class="linkbtn" data-action="side">Noch eine Person</button>
+    </p>
+
+    <button class="btn btn-quiet" data-action="home">Zurück zur Übersicht</button>
+
+    <!-- Zahlen kommen nach dem Push-Moment, nicht davor. -->
+    <div class="stats">
+      <div class="week" data-slot="week" role="img" data-label=""></div>
+      <p class="weekline" data-slot="weekline"></p>
+      <p class="note" data-slot="streak"></p>
+    </div>
+  </section>
+</template>
+
+<!-- ------------------------------------------------- Alle Übungen -->
+<template id="screen-library">
+  <section class="screen screen-library">
+    <div class="topbar">
+      <button class="linkbtn linkbtn-lead" data-action="back">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+        Zurück
+      </button>
+      <p class="eyebrow" data-slot="count"></p>
+    </div>
+    <h1>Alle Übungen</h1>
+    <p class="note" data-slot="lead"></p>
+    <div class="exercise-list" data-slot="list"></div>
+  </section>
+</template>
+
+<!-- ------------------------------------------------- Übung bearbeiten -->
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Figur, animiert</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  /* Werkzeug, nicht Teil der App: Frontalfigur aus dem Figma-Asset, in
+     Bewegung. Links die Galerie aller Bewegungen, rechts das Studio zum
+     Schrauben an den Keyframes. */
+  #app { display: block; padding: 0; }
+
+  .bar {
+    position: sticky; top: 0; z-index: 3;
+    display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+    padding: 12px 16px;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+  }
+  .bar h1 { font-size: 18px; margin: 0 8px 0 0; }
+  .bar a { font-size: 13px; color: var(--accent); }
+  .bar .right { margin-left: auto; display: flex; gap: 14px; }
+
+  .wrap { display: grid; grid-template-columns: 1fr 360px; gap: 24px; padding: 20px 16px 60px; align-items: start; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .card {
+    border: 1px solid var(--line); border-radius: var(--radius-lg, 18px);
+    background: var(--surface); padding: 10px; cursor: pointer; text-align: left;
+    font: inherit; color: inherit; display: block;
+  }
+  .card[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card svg { display: block; width: 100%; height: auto; border-radius: 12px; }
+  .card b { display: block; font-size: 13px; margin-top: 8px; }
+  .card small { color: var(--ink-soft); font-size: 11px; font-family: ui-monospace, "SF Mono", monospace; }
+
+  .studio {
+    position: sticky; top: 62px;
+    border: 1px solid var(--line); border-radius: var(--radius-lg, 18px);
+    background: var(--surface); padding: 14px;
+  }
+  .studio h2 { font-size: 15px; margin: 0 0 10px; }
+  .stage svg { display: block; width: 100%; height: auto; border-radius: 14px; }
+  .row { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+  .row button, .row select {
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px; cursor: pointer;
+  }
+  .row button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+  .keys { display: flex; gap: 6px; flex-wrap: wrap; }
+  .keys button { font-family: ui-monospace, "SF Mono", monospace; font-size: 12px; }
+
+  details { border-top: 1px solid var(--line); padding: 8px 0 2px; }
+  details summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }
+  .slider { display: grid; grid-template-columns: 74px 1fr 46px; gap: 8px; align-items: center; margin: 6px 0; }
+  .slider label { font: 11px/1.4 ui-monospace, "SF Mono", monospace; color: var(--ink-soft); }
+  .slider output { font: 11px/1.4 ui-monospace, "SF Mono", monospace; text-align: right; }
+  .slider.changed label { color: var(--accent); }
+
+  textarea {
+    width: 100%; min-height: 120px; font: 11px/1.5 ui-monospace, "SF Mono", monospace;
+    color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px; resize: vertical;
+  }
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<main id="app">
+  <div class="bar">
+    <h1>Figur, animiert</h1>
+    <span class="hint" id="count"></span>
+    <span class="right">
+      <a href="./uebungen.html">Übungen &rarr;</a>
+      <a href="../">Zur App &rarr;</a>
+    </span>
+  </div>
+
+  <div class="wrap">
+    <div class="grid" id="grid"></div>
+
+    <aside class="studio">
+      <h2 id="studio-name">Studio</h2>
+      <div class="stage" id="stage"></div>
+
+      <div class="row">
+        <button id="play" aria-pressed="true">Pause</button>
+        <select id="speed">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+        </select>
+        <span class="hint" id="time">t 0.00</span>
+      </div>
+      <input type="range" id="scrub" min="0" max="1000" value="0">
+
+      <div class="row keys" id="keys"></div>
+      <p class="hint" id="editing">Keyframe wählen, dann schrauben.</p>
+
+      <div id="sliders"></div>
+
+      <details open>
+        <summary>JSON</summary>
+        <textarea id="json" spellcheck="false"></textarea>
+        <div class="row">
+          <button id="copy">Kopieren</button>
+          <button id="apply">Übernehmen</button>
+        </div>
+        <p class="hint">Fertige Keyframes nach <code>data/animations-front.js</code> übertragen.</p>
+      </details>
+    </aside>
+  </div>
+</main>
+
+<script type="module">
+  import { createFrontFigure, POSE_KEYS, fullPose } from '../lib/figure-front.js'
+  import { playAnimation, sampleAnimation } from '../lib/figure-anim.js'
+  import { ANIMATION_LIST } from '../data/animations-front.js'
+
+  // Arbeitskopie, damit das Studio Keyframes ändern kann, ohne das Modul
+  // anzufassen. Übertragen wird am Ende von Hand über das JSON-Feld.
+  const anims = structuredClone(ANIMATION_LIST)
+
+  const GROUPS = [
+    ['Körper', ['bodyX', 'bodyY', 'bodyRot', 'torso', 'head', 'headX', 'headY']],
+    ['Arm rechts', ['shoulderR', 'elbowR', 'wristR', 'upperArmR', 'foreArmR']],
+    ['Arm links', ['shoulderL', 'elbowL', 'wristL', 'upperArmL', 'foreArmL']],
+    ['Bein rechts', ['hipR', 'kneeR', 'ankleR', 'thighR', 'shinR']],
+    ['Bein links', ['hipL', 'kneeL', 'ankleL', 'thighL', 'shinL']],
+  ]
+  const isLength = (k) => POSE_KEYS[k] === 1
+  const range = (k) => {
+    if (isLength(k)) return { min: 0.05, max: 1.6, step: 0.01 }
+    if (k === 'bodyX' || k === 'bodyY') return { min: -90, max: 90, step: 0.5 }
+    if (k === 'headX' || k === 'headY') return { min: -24, max: 24, step: 0.5 }
+    return { min: -180, max: 180, step: 1 }
+  }
+
+  // ----------------------------------------------------------- Galerie
+  const grid = document.getElementById('grid')
+  const cards = new Map()
+  for (const anim of anims) {
+    const card = document.createElement('button')
+    card.className = 'card'
+    card.type = 'button'
+    const fig = createFrontFigure({ card: true })
+    card.append(fig.el)
+    const label = document.createElement('b')
+    label.textContent = anim.name
+    const meta = document.createElement('small')
+    meta.textContent = `${anim.id} · ${anim.view} · ${anim.duration} ms`
+    card.append(label, meta)
+    card.addEventListener('click', () => select(anim.id))
+    grid.append(card)
+    cards.set(anim.id, { card, player: playAnimation(fig, anim) })
+  }
+  document.getElementById('count').textContent = `${anims.length} Bewegungen`
+
+  // ------------------------------------------------------------ Studio
+  const stageFig = createFrontFigure({ card: true })
+  document.getElementById('stage').append(stageFig.el)
+  const elTime = document.getElementById('time')
+  const elScrub = document.getElementById('scrub')
+  const elPlay = document.getElementById('play')
+  const elKeys = document.getElementById('keys')
+  const elSliders = document.getElementById('sliders')
+  const elJson = document.getElementById('json')
+  const elName = document.getElementById('studio-name')
+  const elEditing = document.getElementById('editing')
+
+  let current = anims[0]
+  let keyIndex = -1
+  const player = playAnimation(stageFig, current, {
+    onTime: (t) => {
+      elTime.textContent = `t ${t.toFixed(2)}`
+      if (document.activeElement !== elScrub) elScrub.value = String(Math.round(t * 1000))
+    },
+  })
+
+  function select(id) {
+    current = anims.find((a) => a.id === id) ?? anims[0]
+    keyIndex = -1
+    player.setAnimation(current)
+    elName.textContent = current.name
+    for (const [key, entry] of cards) entry.card.setAttribute('aria-current', String(key === id))
+    drawKeys()
+    drawSliders()
+    dumpJson()
+  }
+
+  function drawKeys() {
+    elKeys.replaceChildren()
+    current.keys.forEach((k, i) => {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.textContent = `t ${k.t}`
+      b.setAttribute('aria-pressed', String(i === keyIndex))
+      b.addEventListener('click', () => {
+        keyIndex = i === keyIndex ? -1 : i
+        if (keyIndex >= 0) {
+          player.pause()
+          elPlay.setAttribute('aria-pressed', 'false')
+          elPlay.textContent = 'Abspielen'
+          stageFig.setPose(current.keys[keyIndex])
+        }
+        drawKeys()
+        drawSliders()
+      })
+      elKeys.append(b)
+    })
+    elEditing.textContent = keyIndex < 0
+      ? 'Keyframe wählen, dann schrauben.'
+      : `Keyframe ${keyIndex + 1} von ${current.keys.length} wird bearbeitet.`
+  }
+
+  function drawSliders() {
+    elSliders.replaceChildren()
+    if (keyIndex < 0) return
+    const key = current.keys[keyIndex]
+    const pose = fullPose(key)
+    for (const [title, names] of GROUPS) {
+      const box = document.createElement('details')
+      const sum = document.createElement('summary')
+      sum.textContent = title
+      box.append(sum)
+      if (names.some((n) => n in key)) box.open = true
+      for (const name of names) {
+        const { min, max, step } = range(name)
+        const line = document.createElement('div')
+        line.className = 'slider' + (name in key ? ' changed' : '')
+        const lab = document.createElement('label')
+        lab.textContent = name
+        lab.htmlFor = `s-${name}`
+        const input = document.createElement('input')
+        input.type = 'range'
+        input.id = `s-${name}`
+        Object.assign(input, { min, max, step, value: pose[name] })
+        const out = document.createElement('output')
+        out.textContent = Number(pose[name]).toFixed(isLength(name) ? 2 : 1)
+        input.addEventListener('input', () => {
+          const v = Number(input.value)
+          out.textContent = v.toFixed(isLength(name) ? 2 : 1)
+          if (v === POSE_KEYS[name]) delete key[name]
+          else key[name] = v
+          line.classList.toggle('changed', name in key)
+          stageFig.setPose(key)
+          dumpJson()
+          cards.get(current.id)?.player.setAnimation(current)
+        })
+        line.append(lab, input, out)
+        box.append(line)
+      }
+      elSliders.append(box)
+    }
+  }
+
+  function dumpJson() {
+    elJson.value = JSON.stringify(current, null, 2)
+  }
+
+  elPlay.addEventListener('click', () => {
+    const on = player.toggle()
+    elPlay.setAttribute('aria-pressed', String(on))
+    elPlay.textContent = on ? 'Pause' : 'Abspielen'
+    if (on) { keyIndex = -1; drawKeys(); drawSliders() }
+  })
+  document.getElementById('speed').addEventListener('change', (e) => player.setSpeed(Number(e.target.value)))
+  elScrub.addEventListener('input', () => {
+    player.pause()
+    elPlay.setAttribute('aria-pressed', 'false')
+    elPlay.textContent = 'Abspielen'
+    player.seek(Number(elScrub.value) / 1000)
+  })
+  document.getElementById('copy').addEventListener('click', async () => {
+    await navigator.clipboard.writeText(elJson.value)
+  })
+  document.getElementById('apply').addEventListener('click', () => {
+    try {
+      const next = JSON.parse(elJson.value)
+      Object.assign(current, next)
+      player.setAnimation(current)
+      cards.get(current.id)?.player.setAnimation(current)
+      drawKeys()
+      drawSliders()
+    } catch (err) {
+      elEditing.textContent = `JSON kaputt: ${err.message}`
+    }
+  })
+
+  select(anims[0].id)
+</script>
+</body>
+</html>

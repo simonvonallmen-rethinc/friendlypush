@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Flow-Fahrhilfe</title>
+<style>
+  /* Werkzeug, nicht Teil der App. Fährt die App im iframe durch einen Flow,
+     damit sich jeder Screen ohne Handarbeit anschauen lässt.
+     ?seed=<json>   localStorage vorbelegen
+     ?hash=<hash>   die App mit Share-Payload laden
+     ?do=a,b,c      data-action-Werte der Reihe nach klicken
+                    `reload` lädt neu, `tick:<ms>` schiebt die Uhr vor,
+                    `sel:<css>` klickt ein beliebiges Element
+     ?w=390&h=844   Rahmengrösse */
+  body { margin: 0; background: #888; font: 13px system-ui; }
+  iframe { display: block; border: 0; background: #fff; }
+  #log { position: fixed; right: 4px; top: 4px; background: #000c; color: #0f0; padding: 4px 8px; font: 11px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<div id="log">boot</div>
+<script>
+  const q = new URLSearchParams(location.search)
+  const log = document.getElementById('log')
+
+  if (q.has('seed')) localStorage.setItem('fp.v1', q.get('seed'))
+  if (q.get('clear') === '1') localStorage.removeItem('fp.v1')
+
+  const frame = document.createElement('iframe')
+  frame.width = q.get('w') ?? 390
+  frame.height = q.get('h') ?? 844
+  frame.src = `/${q.get('hash') ? '#' + q.get('hash') : ''}`
+  document.body.append(frame)
+
+  const steps = (q.get('do') ?? '').split(',').filter(Boolean)
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+
+  // Pseudo-Schritt `reload` lädt das iframe neu, um Resume zu prüfen.
+  const reload = () => new Promise((done) => {
+    frame.addEventListener('load', () => setTimeout(done, 120), { once: true })
+    frame.contentWindow.location.reload()
+  })
+
+  let offset = 0
+  let booted = false
+  frame.addEventListener('load', async () => {
+    if (booted) return
+    booted = true
+    // Stellbare Uhr im iframe, Basis ist die echte Zeit plus offset.
+    const RealDate = frame.contentWindow.Date
+    frame.contentWindow.Date.now = () => RealDate.parse(new RealDate().toISOString()) + offset
+    await wait(120)
+    const trail = []
+    for (const step of steps) {
+      if (step === 'reload') { await reload(); trail.push('reload'); continue }
+      // tick:<ms> schiebt die Uhr im iframe vor, damit sich der Countdown
+      // prüfen lässt, ohne eine Minute zu warten.
+      // sel:<css> klickt irgendein Element, nicht nur data-action-Knöpfe.
+      if (step.startsWith('sel:')) {
+        const node = frame.contentDocument.querySelector(step.slice(4))
+        if (!node) { trail.push(step + ':MISS'); break }
+        node.click()
+        trail.push(step)
+        await wait(150)
+        continue
+      }
+      if (step.startsWith('tick:')) {
+        offset += Number(step.slice(5))
+        await wait(400)
+        trail.push(step)
+        continue
+      }
+      const doc = frame.contentDocument
+      const el = doc.querySelector(`[data-action="${step}"]`)
+      if (!el) { trail.push(`${step}:MISS`); break }
+      el.click()
+      trail.push(step)
+      await wait(120)
+    }
+    const doc = frame.contentDocument
+    log.textContent = trail.join(' > ') || 'kein Schritt'
+    // ?dump=1 hebt das iframe-Markup ins Hauptdokument, damit --dump-dom es sieht.
+    if (q.get('dump') === '1') {
+      const out = document.createElement('pre')
+      out.id = 'dump'
+      out.textContent = doc.getElementById('app').innerHTML
+      document.body.append(out)
+    }
+  })
+</script>
+</body>
+</html>

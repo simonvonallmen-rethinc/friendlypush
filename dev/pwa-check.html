@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PWA-Prüfung</title>
+<!-- Dasselbe Manifest wie die App, damit der Browser hier dieselbe
+     Installierbarkeit prüft wie dort. -->
+<link rel="manifest" href="../manifest.webmanifest">
+<style>
+  body { margin: 0; padding: 20px; max-width: 760px; background: #fbf8f4; color: #241f1b;
+         font: 15px/1.5 ui-rounded, system-ui, sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: #6c625a; font-size: 14px; }
+  .row { display: grid; grid-template-columns: 24px 190px 1fr; gap: 10px; align-items: start;
+         padding: 9px 0; border-top: 1px solid #e7ded3; }
+  .row b { font-weight: 600; }
+  .row span { color: #6c625a; word-break: break-word; }
+  .ok { color: #2f6f5e; } .bad { color: #9b3b22; } .wait { color: #6c625a; }
+  .mark { font-size: 17px; line-height: 1.4; }
+  #verdict { margin-top: 22px; padding: 16px; border-radius: 16px; background: #fff;
+             border: 1px solid #e7ded3; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>PWA-Prüfung</h1>
+<p class="sub">Diese Seite im selben Browser und unter derselben Adresse öffnen, unter der du die App aufrufst.</p>
+<div id="rows"></div>
+<div id="verdict">läuft…</div>
+
+<script>
+const rows = document.getElementById('rows')
+// Was die Installation verhindert, und was nur unschön ist.
+const blockers = []
+const hints = []
+
+function line(name, state, detail, blocking = true) {
+  const el = document.createElement('div')
+  el.className = 'row'
+  const mark = document.createElement('div')
+  mark.className = 'mark ' + state
+  mark.textContent = state === 'ok' ? '✓' : state === 'bad' ? '✗' : '·'
+  const label = document.createElement('b')
+  label.textContent = name
+  const text = document.createElement('span')
+  text.textContent = detail
+  el.append(mark, label, text)
+  rows.append(el)
+  if (state === 'bad') (blocking ? blockers : hints).push(name + ': ' + detail)
+}
+
+async function head(url) {
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    return { ok: res.ok, status: res.status, type: res.headers.get('content-type') ?? '-' }
+  } catch (e) { return { ok: false, status: 0, type: 'nicht erreichbar (' + e.message + ')' } }
+}
+
+;(async () => {
+  line('Adresse', 'wait', location.href)
+
+  // 1. Ohne sicheren Kontext gibt es weder Service Worker noch Installation.
+  line('Sicherer Kontext', isSecureContext ? 'ok' : 'bad',
+    isSecureContext
+      ? 'ja (' + location.protocol + '//' + location.hostname + ')'
+      : 'nein. Installation braucht https:// oder localhost / 127.0.0.1. '
+        + 'Eine IP wie 192.168.x.x oder file:// reicht nicht.')
+
+  // 2. Browser
+  const brave = navigator.brave && await navigator.brave.isBrave?.()
+  line('Browser', 'wait', (brave ? 'Brave' : 'Chrome/andere') + ' · ' + navigator.userAgent.slice(0, 90))
+
+  // 3. Manifest
+  const link = document.querySelector('link[rel="manifest"]')
+  const manUrl = link ? new URL(link.getAttribute('href'), location.href).href : null
+  if (!manUrl) line('Manifest-Link', 'bad', 'fehlt im Kopf der Seite')
+  else {
+    const res = await head(manUrl)
+    const typeOk = /application\/manifest\+json|application\/json/.test(res.type)
+    line('Manifest', res.ok ? (typeOk ? 'ok' : 'bad') : 'bad',
+      res.status + ' · ' + res.type + (res.ok && !typeOk
+        ? ' — falscher Content-Type. Der Server muss .webmanifest als application/manifest+json ausliefern.'
+        : '') + ' · ' + manUrl)
+
+    if (res.ok) {
+      try {
+        const man = await (await fetch(manUrl, { cache: 'no-store' })).json()
+        const start = new URL(man.start_url ?? './', manUrl).href
+        const scope = new URL(man.scope ?? './', manUrl).href
+        line('start_url / scope', start.startsWith(scope) ? 'ok' : 'bad', start + '  in  ' + scope)
+        line('display', ['standalone', 'fullscreen', 'minimal-ui'].includes(man.display) ? 'ok' : 'bad',
+          man.display ?? 'fehlt')
+
+        const icons = man.icons ?? []
+        const any = icons.filter((i) => !i.purpose || i.purpose.split(' ').includes('any'))
+        const has = (s) => any.some((i) => (i.sizes ?? '').split(' ').includes(s))
+        line('Icons 192 und 512', has('192x192') && has('512x512') ? 'ok' : 'bad',
+          icons.map((i) => i.sizes).join(', ') || 'keine')
+
+        for (const icon of icons) {
+          const url = new URL(icon.src, manUrl).href
+          const r = await head(url)
+          line('Icon ' + icon.sizes, r.ok ? 'ok' : 'bad', r.status + ' · ' + r.type + ' · ' + icon.src)
+        }
+      } catch (e) { line('Manifest-Inhalt', 'bad', 'nicht lesbar: ' + e.message) }
+    }
+  }
+
+  // 4. Service Worker
+  // Für die Installation verlangt Chrome längst keinen Worker mehr, für
+  // Offline schon. Darum zählt er hier nicht als Blocker.
+  if (!('serviceWorker' in navigator)) {
+    line('Service Worker (Offline)', 'bad', 'vom Browser nicht angeboten', false)
+  } else {
+    const reg = await navigator.serviceWorker.getRegistration()
+    line('Service Worker (Offline)', reg ? 'ok' : 'bad', reg
+      ? 'angemeldet, Scope ' + reg.scope
+        + (navigator.serviceWorker.controller ? ', steuert die Seite' : ', steuert noch nicht')
+      : 'nicht angemeldet. Für die Installation nicht nötig, für Offline schon. '
+        + 'Zuerst die App selbst öffnen, dann hierher zurück.', false)
+  }
+
+  // 5. Schon installiert?
+  const mode = ['standalone', 'minimal-ui', 'fullscreen', 'browser']
+    .find((m) => matchMedia('(display-mode: ' + m + ')').matches) ?? 'unbekannt'
+  line('Anzeigemodus', 'wait', mode + (mode === 'browser' ? ' (im Tab)' : ' (installiert geöffnet)'))
+
+  if (navigator.getInstalledRelatedApps) {
+    const apps = await navigator.getInstalledRelatedApps().catch(() => [])
+    line('Schon installiert', apps.length ? 'bad' : 'ok',
+      apps.length ? 'ja — darum bietet der Browser nichts mehr an' : 'nein')
+  }
+
+  // 6. Das Angebot des Browsers. Es kommt verzögert, darum wird gewartet.
+  const verdict = document.getElementById('verdict')
+  verdict.textContent = 'warte 10 Sekunden auf das Angebot des Browsers…'
+  const prompt = await new Promise((done) => {
+    addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); done(true) }, { once: true })
+    setTimeout(() => done(false), 10000)
+  })
+  line('beforeinstallprompt', prompt ? 'ok' : 'bad', prompt
+    ? 'gefeuert — der Browser bietet die Installation an'
+    : 'nicht gefeuert')
+
+  const wo = brave
+    ? 'In Brave gibt es kein Symbol in der Adressleiste. Der Weg ist das Menü ☰ rechts oben → '
+      + '"App installieren…". Fehlt der Eintrag, hilft meist: Shields für diese Seite aus, neu laden.'
+    : 'In Chrome sitzt das Symbol rechts in der Adressleiste (Bildschirm mit Pfeil nach unten) und '
+      + 'erscheint nur, wenn das Fenster breit genug ist. Sonst: Menü ⋮ → "Übertragen, speichern und '
+      + 'teilen" → "Seite als App installieren".'
+
+  const rest = hints.length ? '\n\nAusserdem (betrifft nur Offline):\n' + hints.map((h) => '• ' + h).join('\n') : ''
+
+  verdict.textContent = blockers.length === 0
+    ? (prompt
+        ? 'Installierbar. Der Browser hat das Angebot gemacht, in der App steht der Knopf '
+          + '"Auf den Homescreen".\n\n' + wo
+        : 'Keine Blocker gefunden, aber der Browser hat kein Angebot gemacht. Entweder ist die App '
+          + 'schon installiert, oder dieser Browser bietet nichts an (Safari und Firefox tun das nie, '
+          + 'dort geht es nur von Hand).\n\n' + wo)
+      + rest
+    : 'Das verhindert die Installation:\n\n' + blockers.map((b) => '• ' + b).join('\n') + rest
+})()
+</script>
+</body>
+</html>

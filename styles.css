@@ -527,7 +527,14 @@ body.is-home #app { padding: 0; }
   border-bottom: 1px solid color-mix(in srgb, var(--band) 34%, var(--line));
 }
 
-.screen-home .lp-band-green .lp-inner { padding: 34px 16px 36px; gap: 18px; }
+/* Das Startband trägt den Kern der App, darum nimmt es ein knappes Drittel
+   des Fensters und legt seinen Inhalt in die Mitte. */
+.screen-home .lp-band-green .lp-inner {
+  padding: 34px 16px 36px;
+  gap: 18px;
+  min-height: 30vh;
+  justify-content: center;
+}
 
 /* Zwei Kanten übereinander wären eine zu viel. */
 .screen-home .lp-band-green + .lp-band { border-top: 0; }
@@ -1465,8 +1472,8 @@ body.has-bar .footer { display: none; }
 /* Eine Gruppe, nicht zwei Knöpfe: der gemeinsame Rahmen sagt, dass genau
    eine der beiden Lagen gilt und ein Tippen die andere wählt. */
 .chips {
-  display: inline-flex;
-  align-self: flex-start;
+  display: flex;
+  align-self: stretch;
   max-width: 100%;
   padding: 3px;
   border: 1px solid var(--line);
@@ -1492,6 +1499,15 @@ body.has-bar .footer { display: none; }
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 600;
+}
+
+/* Auf schmalen Geräten liegt die Gruppe über die ganze Spalte, damit beide
+   Lagen gleich gross zu treffen sind. Ab 450px nimmt sie nur ihre Breite. */
+@media (min-width: 450px) {
+  .chips {
+    display: inline-flex;
+    align-self: flex-start;
+  }
 }
 
 .chips:has(.chip:disabled) { opacity: 0.55; }

@@ -55,8 +55,10 @@ function mount({ node }, id = '') {
   standing = id
   // Der Übungsscreen hat eine feste Fussleiste, der Rest nicht.
   document.body.classList.toggle('has-bar', id === 'exercise')
-  // Die Erklärung läuft in Bändern über die ganze Breite, die App nicht.
+  // Erklärung und Startseite laufen in Bändern über die ganze Breite und
+  // bringen ihre Polsterung selber mit.
   document.body.classList.toggle('is-landing', id === 'landing')
+  document.body.classList.toggle('is-home', id === 'home')
   document.body.classList.toggle('has-help', id in HELP_FROM)
   window.scrollTo(0, 0)
 }
@@ -137,8 +139,7 @@ function icon(id) {
 }
 
 /**
- * Die laufende Woche als sieben Tage. Ein Tag mit Push trägt zum Haken
- * zusätzlich einen Stern: er ist ein Trainingstag und einer mehr.
+ * Die laufende Woche als sieben Tage. Ein erledigter Tag trägt einen Haken.
  */
 function fillWeek(el, days) {
   el.replaceChildren()
@@ -155,7 +156,7 @@ function fillWeek(el, days) {
     label.textContent = day.label
     const mark = document.createElement('b')
     mark.setAttribute('aria-hidden', 'true')
-    mark.textContent = day.done ? (day.push ? '\u2713\u2605' : '\u2713') : ''
+    mark.textContent = day.done ? '\u2713' : ''
     cell.append(label, mark)
     el.append(cell)
   }
@@ -358,14 +359,16 @@ function showHome() {
   }
 
   // Die Karte zeigt die offene Geste: entweder schuldest du jemandem den Push
-  // zurück, oder deine bisherigen Pushes stehen da.
+  // zurück, oder deine bisherigen Pushes stehen da. Weggetippt bleibt sie
+  // weg, bis ein neuer Push rausgeht.
   const pushes = store.pushCount(state)
   const from = state.pushedBy?.name
-  if (from || pushes) {
+  if (from || pushes > state.pushCardSeen) {
     view.slots.pushcard.hidden = false
     fillPair(view.slots.pushpair, from
       ? [{ name: from, done: true }, { name: myLabel(state), done: true, you: true }]
-      : [{ name: myLabel(state), done: true, you: true }, { name: 'weitergegeben', done: true }])
+      : [{ name: myLabel(state), done: true, you: true },
+         { name: store.lastPushAlias(state), done: true }])
     view.slots.pushnote.textContent = from
       ? `${from} hat dich gepusht. Beim nächsten Mal gibst du ${from} den friendly push.`
       : pushCountText(pushes)
@@ -382,6 +385,13 @@ function showHome() {
 
   on(view.root, 'start', () => showReady())
   on(view.root, 'library', () => showLibrary())
+  // Das Kreuz räumt die Karte weg: den offenen Push quittiert es, die eigene
+  // Bilanz verschwindet bis zum nächsten Push.
+  on(view.root, 'pushcard-hide', () => {
+    if (from) store.clearPushedBy()
+    else store.hidePushCard(state)
+    showHome()
+  })
   mount(view, 'home')
 }
 

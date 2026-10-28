@@ -362,8 +362,11 @@ h1 {
   background: color-mix(in srgb, var(--accent-text) 45%, var(--line));
 }
 
-/* Push-Karte auf der Startseite: die offene Geste, falls es eine gibt. */
+/* Push-Karte auf der Startseite: die offene Geste, falls es eine gibt. Sie
+   gehört zur Lage und steht darum im selben Band wie die Woche. Oben rechts
+   sitzt das Kreuz, das sie wegräumt: ein Hinweis, keine Aufgabe. */
 .pushcard {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -372,9 +375,22 @@ h1 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px;
+  padding-right: 48px;
 }
 
 .pushcard p { margin: 0; font-size: 14px; color: var(--ink-soft); text-wrap: pretty; }
+
+.pushcard-hide {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 16px;
+}
 
 /* Der Hinweis an die Person, die dich gepusht hat. Er steht in der
    Accent-Farbe, weil er die einzige Verbindung nach aussen ist. */
@@ -478,6 +494,47 @@ h1 {
 .steps li > span { display: block; }
 
 .steps b { color: var(--ink); font-weight: 600; }
+
+/* ------------------------------------------------------------------ Startseite */
+/* Die Startseite trägt dieselben Bänder wie die Erklärung, damit ihre
+   Bereiche sichtbar auseinanderliegen: ein Thema pro Band, die Kante trennt
+   und nicht der Abstand. Die Bänder laufen über die ganze Breite, der Inhalt
+   bleibt die schmale Spalte der App, und die Polsterung ist knapper als auf
+   der Erklärung: die Seite wird bedient, nicht gelesen. */
+body.is-home #app { padding: 0; }
+
+.screen-home {
+  max-width: none;
+  gap: 0;
+}
+
+.screen-home .lp-inner {
+  max-width: 460px;
+  padding: 24px 16px;
+  gap: 16px;
+}
+
+/* Oben hängt das erste Band an der Kopfzeile, unten endet die Seite ohne
+   weitere Kante. */
+.screen-home .lp-band-hero .lp-inner { padding-top: 20px; }
+.screen-home .lp-band:last-child { border-bottom: 0; }
+
+/* Der Start ist der Bereich, auf den es ankommt: mehr Luft, etwas mehr Ton
+   und eine Kante auf beiden Seiten. */
+.screen-home .lp-band-green {
+  background: color-mix(in srgb, var(--band) 16%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--band) 34%, var(--line));
+  border-bottom: 1px solid color-mix(in srgb, var(--band) 34%, var(--line));
+}
+
+.screen-home .lp-band-green .lp-inner { padding: 34px 16px 36px; gap: 18px; }
+
+/* Zwei Kanten übereinander wären eine zu viel. */
+.screen-home .lp-band-green + .lp-band { border-top: 0; }
+
+/* Der Fuss trägt nur noch das Löschen und darf leise sein. */
+.screen-home-foot .lp-inner { padding: 28px 16px 36px; }
+
 
 /* ------------------------------------------------------------------ Landing */
 /* Der Einstieg, und ab dem Fragezeichen die Erklärung. Er wird gelesen, nicht
@@ -1059,10 +1116,6 @@ body.has-toast .helpbtn { display: none; }
   color: var(--accent-ink);
 }
 .day[data-done] i { color: inherit; opacity: 0.75; }
-
-/* Ein Tag, an dem ein Push rausging, ist mehr als ein Trainingstag: er
-   behält die Fläche des erledigten Tages und bekommt den Stern dazu. */
-.day[data-push] b { font-size: 12px; letter-spacing: 0.5px; }
 
 .weekline { margin: 0; font-size: 17px; font-weight: 600; text-wrap: pretty; }
 

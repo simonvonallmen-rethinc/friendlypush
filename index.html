@@ -385,47 +385,70 @@
 
 <!-- ------------------------------------------------- Einstieg ohne Link -->
 <template id="screen-home">
+  <!-- Die Startseite ist in Bänder geschnitten wie die Erklärung: ein Thema
+       pro Band, über die ganze Breite, die Kante trennt und nicht der
+       Abstand. Oben die Lage, dann der Start, unten die Daten. -->
   <section class="screen screen-home">
-    <p class="eyebrow brand">friendly push <span class="tag">beta</span></p>
-    <h1 data-slot="headline">Zehn Minuten für deinen Rücken</h1>
 
-    <div class="intro" data-slot="intro" hidden>
-      <ol class="steps">
-        <li><span>
-          <b>Zehn Minuten, sechs Übungen.</b>
-          Gegen Rundrücken, vorgezogene Schultern und ein vorgekipptes Becken.
-        </span></li>
-        <li><span>
-          <b>Dreimal die Woche.</b>
-          Mehr braucht es nicht. Was du geschafft hast, merkt sich die App von selbst.
-        </span></li>
-        <li><span>
-          <b>Danach motivierst du eine Person.</b>
-          Ein Link an jemanden deiner Wahl. Mehr ist es nicht: wer mitmacht, gibt den
-          Push beim nächsten Mal selber weiter.
-        </span></li>
-      </ol>
-      <div class="pair" data-slot="demo"></div>
+    <!-- Lage: wer du bist, wie die Woche steht, welche Geste offen ist. -->
+    <div class="lp-band lp-band-hero">
+      <div class="lp-inner">
+        <p class="eyebrow brand">friendly push <span class="tag">beta</span></p>
+        <h1 data-slot="headline">Zehn Minuten für deinen Rücken</h1>
+
+        <div class="intro" data-slot="intro" hidden>
+          <ol class="steps">
+            <li><span>
+              <b>Zehn Minuten, sechs Übungen.</b>
+              Gegen Rundrücken, vorgezogene Schultern und ein vorgekipptes Becken.
+            </span></li>
+            <li><span>
+              <b>Dreimal die Woche.</b>
+              Mehr braucht es nicht. Was du geschafft hast, merkt sich die App von selbst.
+            </span></li>
+            <li><span>
+              <b>Danach motivierst du eine Person.</b>
+              Ein Link an jemanden deiner Wahl. Mehr ist es nicht: wer mitmacht, gibt den
+              Push beim nächsten Mal selber weiter.
+            </span></li>
+          </ol>
+          <div class="pair" data-slot="demo"></div>
+        </div>
+
+        <div class="week" data-slot="week" data-hide-on-intro role="img" data-label=""></div>
+        <p class="weekline" data-slot="weekline" data-hide-on-intro></p>
+
+        <!-- Die offene Geste gehört zur Lage, darum steht sie als Karte in
+             diesem Band. Sie ist ein Hinweis und keine Aufgabe: das Kreuz
+             räumt sie weg. -->
+        <div class="pushcard" data-slot="pushcard" hidden>
+          <button class="linkbtn pushcard-hide" data-action="pushcard-hide"
+                  aria-label="Hinweis entfernen" title="Entfernen">
+            <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+          </button>
+          <div class="pair" data-slot="pushpair"></div>
+          <p data-slot="pushnote"></p>
+        </div>
+      </div>
     </div>
 
-    <div class="week" data-slot="week" data-hide-on-intro role="img" data-label=""></div>
-    <p class="weekline" data-slot="weekline" data-hide-on-intro></p>
-
-    <div class="pushcard" data-slot="pushcard" hidden>
-      <div class="pair" data-slot="pushpair"></div>
-      <p data-slot="pushnote"></p>
+    <!-- Der Start, mit der Frage davor und dem Weg in die Übungsliste: alles,
+         was zum Trainieren gehört, steht in einem Band. -->
+    <div class="lp-band lp-band-green">
+      <div class="lp-inner">
+        <div class="prefs" data-slot="prefs"></div>
+        <button class="btn btn-primary" data-action="start" data-slot="startbtn">Einheit starten</button>
+        <p class="note" data-slot="resume" hidden></p>
+        <button class="btn btn-quiet" data-action="library">Alle Übungen ansehen</button>
+      </div>
     </div>
 
-    <div class="prefs" data-slot="prefs"></div>
-
-    <button class="btn btn-primary" data-action="start" data-slot="startbtn">Einheit starten</button>
-    <p class="note" data-slot="resume" hidden></p>
-
-    <button class="btn btn-quiet" data-action="library">Alle Übungen ansehen</button>
-
-    <!-- Alles löschen steht am Ende der Übersicht: es gehört dorthin, wo die
-         Daten liegen, nicht in die Erklärung. -->
-    <div class="wipe" data-slot="wipe"></div>
+    <!-- Der Fuss: hier liegen die Daten, hier werden sie auch gelöscht. -->
+    <div class="lp-band lp-band-soft screen-home-foot">
+      <div class="lp-inner">
+        <div class="wipe" data-slot="wipe"></div>
+      </div>
+    </div>
   </section>
 </template>
 

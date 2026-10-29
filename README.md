@@ -1,4 +1,4 @@
-**🚀 Beta: Die Idee steht. Alles andere ist noch experimentell und kann sich jeden Tag ändern. Die Übungen sind bisher Platzhalter und werden später verfeinert, ergänzt oder ersetzt. Stay tuned!
+** 🚀 Beta: Die Idee steht. Alles andere ist noch experimentell und kann sich jeden Tag ändern. Die Übungen sind bisher Platzhalter und werden später verfeinert, ergänzt oder ersetzt. Stay tuned!
 **
 
 # friendly push

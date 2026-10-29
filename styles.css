@@ -174,6 +174,9 @@ body {
 
 h1 {
   font-size: calc(clamp(26px, 7vw, 34px) * var(--fs));
+  /* Schwerer als das voreingestellte Fett: die Überschrift ist auf jedem
+     Screen die eine Aussage und soll den Abstand zum Fliesstext halten. */
+  font-weight: 900;
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin: 0;
@@ -200,6 +203,10 @@ h1 {
   text-transform: uppercase;
   color: var(--ink-soft);
 }
+
+/* Die Wortmarke trägt dieselbe Form wie die Labels, steht aber schwerer:
+   sie ist ein Name und keine Beschriftung. */
+.eyebrow.brand { font-weight: 700; }
 
 .lead { margin: 0; color: var(--ink-soft); }
 
@@ -232,6 +239,15 @@ h1 {
 }
 
 .btn:active:not(:disabled) { transform: scale(0.97); }
+
+/* Ein Link, der wie ein Knopf aussieht: er führt aus der App heraus, trägt
+   aber dieselbe Form. Ohne das Folgende wäre er ein unterstrichener Block. */
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
 
 /* Ein Knopf, dem noch eine Angabe fehlt, wartet sichtbar: er bleibt stehen,
    wo er ist, und tritt zurück. Was fehlt, sagt das Feld darüber. */
@@ -918,6 +934,7 @@ body.is-landing #app { padding: 0; }
   line-height: 1.45;
   color: var(--ink-soft);
 }
+
 
 /* Die Woche als sieben Felder, zwei davon erledigt. Angedeutet, nicht
    nachgebaut: mehr als die Form ist hinter dem vorderen Gerät nicht zu

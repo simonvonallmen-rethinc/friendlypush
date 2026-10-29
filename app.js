@@ -112,6 +112,39 @@ function fillPair(el, people) {
     if (person.edit) peer.append(editMark(person.edit))
     el.append(peer)
   })
+  // Erst im nächsten Frame steht das Paar im Dokument und lässt sich messen.
+  requestAnimationFrame(() => measurePair(el))
+  watchPairs()
+}
+
+/**
+ * Stehen die beiden Plätze nebeneinander oder untereinander? Das hängt an
+ * der Länge der Namen und an der Breite daneben, nicht an einer Schwelle,
+ * die man im Stylesheet raten könnte. Also wird gemessen: liegen die Plätze
+ * auf verschiedenen Höhen, kippt die Verbindung mit.
+ */
+function measurePair(el) {
+  const peers = [...el.querySelectorAll('.peer')]
+  // Ohne das Attribut messen, sonst misst man die eigene Wirkung.
+  delete el.dataset.stacked
+  if (peers.length < 2) return
+  const top = peers[0].offsetTop
+  if (peers.some((peer) => peer.offsetTop !== top)) el.dataset.stacked = ''
+}
+
+/**
+ * Ein Fenster, das schmaler wird, kann ein Paar umbrechen lassen. Ein
+ * einziger Horcher für alle Paare, statt einer Beobachtung pro Element: die
+ * würde auf die eigene Umschaltung reagieren und sich im Kreis drehen.
+ */
+let pairsWatched = false
+
+function watchPairs() {
+  if (pairsWatched) return
+  pairsWatched = true
+  window.addEventListener('resize', () => {
+    for (const el of document.querySelectorAll('.pair')) measurePair(el)
+  })
 }
 
 /** Der Stift am eigenen Namen. */
@@ -201,14 +234,203 @@ function doseText(dose) {
   return dose.seconds >= 60 ? `${dose.seconds / 60} Minute` : `${dose.seconds} Sekunden`
 }
 
+/** Die Pushes der laufenden Woche. Am Montag fängt die Zählung von vorne an. */
 function pushCountText(n) {
   if (n === 0) return ''
-  return n === 1 ? 'Du hast eine Person motiviert.' : `Du hast ${n} Personen motiviert.`
+  return n === 1
+    ? 'Du hast diese Woche eine Person motiviert.'
+    : `Du hast diese Woche ${n} Personen motiviert.`
+}
+
+/**
+ * Das Wochenziel ist eine Untergrenze. Ohne diesen Zusatz liest sich die Zahl
+ * wie ein Soll, das man nicht überschreiten müsste.
+ */
+function weekMoreLine(state) {
+  return store.weekProgress(state).reached
+    ? 'Je mehr, desto besser: jede weitere Einheit zählt obendrauf.'
+    : `${WEEK_GOAL} Einheiten sind das Ziel. Mehr ist besser.`
 }
 
 /** Mein Anzeigename, solange keiner gesetzt ist. */
 function myLabel(state) {
   return state.name ?? 'Du'
+}
+
+// --------------------------------------------------------------- Darstellung
+
+/**
+ * Schriftgrösse als Faktor auf dem Wurzelelement. Jede Grösse im Stylesheet
+ * rechnet damit, darum reicht eine Zahl statt einer zweiten Palette.
+ */
+const FONT_SIZES = [
+  { id: 's', label: 'Klein', scale: 0.92 },
+  { id: 'm', label: 'Normal', scale: 1 },
+  { id: 'l', label: 'Gross', scale: 1.12 },
+]
+
+const THEMES = [
+  { id: 'system', label: 'System' },
+  { id: 'light', label: 'Hell' },
+  { id: 'dark', label: 'Dunkel' },
+]
+
+function fontSizeOf(prefs) {
+  return FONT_SIZES.find((f) => f.scale === prefs.fontScale) ?? FONT_SIZES[1]
+}
+
+/**
+ * Modus und Schriftgrösse anwenden. Ohne gewählten Modus bleibt das Attribut
+ * weg und die Systemabfrage im Stylesheet behält das Wort.
+ */
+function applyLook(prefs = store.load().prefs) {
+  const root = document.documentElement
+  if (prefs.theme === 'light' || prefs.theme === 'dark') root.dataset.theme = prefs.theme
+  else delete root.dataset.theme
+  root.style.setProperty('--fs', String(fontSizeOf(prefs).scale))
+  syncThemeColor(prefs.theme)
+}
+
+/**
+ * Die Farbe der Systemleiste folgt dem gewählten Modus, nicht dem des
+ * Systems: die nicht gewählte Fassung wird per `media` stillgelegt, statt
+ * eine dritte Angabe danebenzustellen, die ohnehin nicht gewinnen würde.
+ */
+function syncThemeColor(theme) {
+  const pick = (mode, query) => {
+    const meta = document.querySelector(`meta[name="theme-color"][data-mode="${mode}"]`)
+    if (!meta) return
+    meta.media = theme === mode ? 'all' : theme === 'system' ? query : 'not all'
+  }
+  pick('light', '(prefers-color-scheme: light)')
+  pick('dark', '(prefers-color-scheme: dark)')
+}
+
+/**
+ * Eine Gruppe aus der gleichen Form wie die Frage vor dem Start: ein Rahmen,
+ * darin genau eine gewählte Lage.
+ */
+function fillChips(el, options, current, pick) {
+  el.replaceChildren()
+  for (const option of options) {
+    const chip = document.createElement('button')
+    chip.type = 'button'
+    chip.className = 'chip'
+    chip.textContent = option.label
+    chip.setAttribute('aria-pressed', String(option.id === current))
+    chip.addEventListener('click', () => pick(option))
+    el.append(chip)
+  }
+}
+
+// ------------------------------------------------------------ Einstellungen
+
+/**
+ * Was zur Person gehört und nicht zur Einheit: Name, Schriftgrösse, Modus.
+ * Alles greift im selben Moment, es gibt nichts zu bestätigen.
+ *
+ * @param {() => void} back Wohin das Zurück führt.
+ */
+function showSettings(back = showHome) {
+  const view = screen('settings')
+  const state = store.load()
+
+  const name = view.slots.name
+  name.value = state.name ?? ''
+  // Jeder Buchstabe zählt sofort, wie im Feld auf dem Abschluss-Screen auch.
+  name.addEventListener('input', () => store.setName(name.value))
+  name.addEventListener('keydown', (event) => { if (event.key === 'Enter') name.blur() })
+
+  const drawFont = () => fillChips(
+    view.slots.font, FONT_SIZES, fontSizeOf(store.load().prefs).id,
+    (option) => {
+      applyLook(store.setPrefs({ fontScale: option.scale }).prefs)
+      drawFont()
+    })
+  drawFont()
+
+  const drawTheme = () => {
+    const theme = store.load().prefs.theme
+    fillChips(view.slots.theme, THEMES, theme, (option) => {
+      applyLook(store.setPrefs({ theme: option.id }).prefs)
+      drawTheme()
+    })
+    view.slots.themenote.textContent = theme === 'system'
+      ? 'Folgt der Einstellung deines Geräts.'
+      : 'Gilt nur in dieser App, unabhängig vom Gerät.'
+  }
+  drawTheme()
+
+  fillData(view.slots.data, view.slots.raw)
+  // Nach dem Löschen zeichnet sich die Seite neu: dort steht, was es nicht
+  // mehr gibt, und das Feld oben ist wieder leer.
+  fillWipe(view.slots.wipe, () => showSettings(back))
+
+  on(view.root, 'back', back)
+  mount(view, 'settings')
+}
+
+/** Ein ISO-Tag als 29.10.2026. */
+function dayText(day) {
+  const [y, m, d] = String(day).split('-')
+  return `${d}.${m}.${y}`
+}
+
+/**
+ * Was auf diesem Gerät liegt, in Worten und darunter im Original. Die App
+ * sagt überall, dass nichts weggeht; dann soll man auch nachsehen können.
+ */
+function fillData(list, raw) {
+  const state = store.load()
+  const stored = store.raw()
+  const rows = []
+
+  rows.push(['Vorname', state.name ?? 'noch keiner'])
+
+  const last = state.history.at(-1)
+  rows.push(['Abgeschlossene Einheiten', state.history.length === 0
+    ? 'noch keine'
+    : `${state.history.length}, zuletzt am ${dayText(last)}`])
+
+  const week = store.weekProgress(state)
+  rows.push(['Diese Woche', `${week.done} von ${week.goal}`])
+
+  const run = store.streak(state)
+  rows.push(['Wochen am Stück', run === 0 ? 'keine' : String(run)])
+
+  const pushes = store.pushesThisWeek(state)
+  rows.push(['Pushes', state.pushes.length === 0
+    ? 'noch keine'
+    : `${state.pushes.length} insgesamt, ${pushes} diese Woche`])
+
+  if (state.pushedBy?.name) {
+    rows.push(['Offener Push', `an ${state.pushedBy.name}, seit ${dayText(state.pushedBy.day)}`])
+  }
+
+  rows.push(['Angefangene Einheit', state.active
+    ? `${state.active.done.length} von ${SLOTS.length} erledigt`
+    : 'keine'])
+
+  rows.push(['Vorlieben', [
+    state.prefs.floor ? 'auch am Boden' : 'nur im Stehen',
+    fontSizeOf(state.prefs).label.toLowerCase(),
+    THEMES.find((t) => t.id === state.prefs.theme)?.label.toLowerCase() ?? 'system',
+  ].join(', ')])
+
+  rows.push(['Platz', stored ? `${stored.length} Zeichen` : 'nichts gespeichert'])
+
+  list.replaceChildren()
+  for (const [label, value] of rows) {
+    const dt = document.createElement('dt')
+    dt.textContent = label
+    const dd = document.createElement('dd')
+    dd.textContent = value
+    list.append(dt, dd)
+  }
+
+  raw.textContent = stored
+    ? `${store.KEY} = ${stored}`
+    : 'Auf diesem Gerät liegt noch nichts.'
 }
 
 // ------------------------------------------------------------------ Satz
@@ -258,7 +480,7 @@ function fillPrefs(el) {
 
   const label = document.createElement('p')
   label.className = 'prefs-label'
-  label.textContent = 'Heute trainiere ich'
+  label.textContent = 'Heute trainiere ich 🚀'
 
   const row = document.createElement('div')
   row.className = 'chips'
@@ -348,22 +570,26 @@ function showHome() {
   } else {
     fillWeek(view.slots.week, store.weekDays(state))
     view.slots.weekline.textContent = weekSentence(state)
+    view.slots.weekmore.textContent = weekMoreLine(state)
   }
 
   const trained = store.trainedToday(state)
   if (!firstVisit) {
-    view.slots.headline.textContent = trained
-      ? 'Heute schon trainiert'
-      : 'Zehn Minuten für deinen Rücken'
+    // Mit Namen wird die Person angesprochen statt informiert. Ohne Namen
+    // bleibt es bei der Ansage, ein «Hey Du» wäre schlechter als keines.
+    const line = trained ? 'heute schon trainiert' : 'zehn Minuten für deinen Rücken'
+    view.slots.headline.textContent = state.name
+      ? `Hey ${state.name}, ${line}`
+      : line.charAt(0).toUpperCase() + line.slice(1)
     view.slots.startbtn.textContent = trained ? 'Nochmal trainieren' : 'Einheit starten'
   }
 
   // Die Karte zeigt die offene Geste: entweder schuldest du jemandem den Push
   // zurück, oder deine bisherigen Pushes stehen da. Weggetippt bleibt sie
   // weg, bis ein neuer Push rausgeht.
-  const pushes = store.pushCount(state)
+  const pushes = store.pushesThisWeek(state)
   const from = state.pushedBy?.name
-  if (from || pushes > state.pushCardSeen) {
+  if (from || pushes > store.pushCardSeen(state)) {
     view.slots.pushcard.hidden = false
     fillPair(view.slots.pushpair, from
       ? [{ name: from, done: true }, { name: myLabel(state), done: true, you: true }]
@@ -381,7 +607,6 @@ function showHome() {
   }
 
   fillPrefs(view.slots.prefs)
-  fillWipe(view.slots.wipe, showHome)
 
   on(view.root, 'start', () => showReady())
   on(view.root, 'library', () => showLibrary())
@@ -452,13 +677,13 @@ function showLanding(back = null) {
  * es: der Verlauf liegt nur hier, und was weg ist, kommt nicht wieder. Ein
  * Knopf allein wäre für diesen Schritt zu wenig Widerstand.
  *
- * Er steht an zwei Orten, weil er an beiden gesucht wird: am Ende der
- * Übersicht, wo die Daten sichtbar sind, und in der Antwort, die von ihnen
- * handelt.
+ * Er steht an zwei Orten, weil er an beiden gesucht wird: in den
+ * Einstellungen unter «Daten», direkt neben dem, was gelöscht wird, und in
+ * der Antwort der Erklärung, die davon handelt.
  *
  * @param {HTMLElement} el
  * @param {(() => void)|null} after Was nach dem Löschen zu tun ist. Die
- *   Übersicht zeichnet sich neu, weil dort steht, was es nicht mehr gibt.
+ *   Einstellungen zeichnen sich neu, weil dort steht, was es nicht mehr gibt.
  *   Die Erklärung bleibt stehen, dort ändert sich nichts.
  */
 function fillWipe(el, after = null) {
@@ -583,12 +808,16 @@ function showExercise() {
   view.slots.progress.replaceChildren()
   const done = state.active?.done ?? []
   const skipped = state.active?.skipped ?? []
+  // Die Balken lesen aus dem eingefrorenen Satz der Einheit. Würden sie die
+  // Übung pro Slot neu ziehen, stünde dort eine andere Id als die erledigte
+  // und kein Balken würde je gefüllt.
+  const set = state.active?.set ?? []
   SLOTS.forEach((s, i) => {
     const bar = document.createElement('i')
-    const id = pickExercise(s, state.sessionCount).id
+    const id = set[i]
     if (i === slotIndex) bar.dataset.now = ''
-    else if (done.includes(id)) bar.dataset.on = ''
-    else if (skipped.includes(id)) bar.dataset.skip = ''
+    else if (id && done.includes(id)) bar.dataset.on = ''
+    else if (id && skipped.includes(id)) bar.dataset.skip = ''
     view.slots.progress.append(bar)
   })
   view.slots.progress.setAttribute('aria-label', `Übung ${slotIndex + 1} von ${SLOTS.length}`)
@@ -655,6 +884,7 @@ function showDone() {
 
   fillWeek(view.slots.week, store.weekDays(state))
   view.slots.weekline.textContent = weekSentence(state)
+  view.slots.weekmore.textContent = weekMoreLine(state)
 
   const run = store.streak(state)
   view.slots.streak.textContent = run > 0
@@ -668,7 +898,8 @@ function showDone() {
   renderPushStep(view)
 
   on(view.root, 'side', async () => {
-    if (await sendInvite(view, { extra: true })) burst(view.slots.party)
+    const result = await sendInvite(view, { extra: true })
+    if (result) showPushSent(view, result)
   })
   on(view.root, 'home', () => {
     leaveLink()
@@ -690,6 +921,10 @@ function showDone() {
  */
 function renderPushStep(view) {
   view.slots.share.replaceChildren()
+  // Die Decknamen der Pushes, die auf diesem Screen rausgegangen sind. Jeder
+  // bekommt einen eigenen Platz im Paar: wer zwei Leute motiviert, soll zwei
+  // Leute sehen und nicht zweimal dieselbe Meldung.
+  view.sent = []
   renderPair(view)
   view.slots.sharehow.textContent =
     'Jetzt gibst du den Push weiter. Ein Link an eine Person, das war es.'
@@ -709,16 +944,19 @@ function renderPushStep(view) {
  * ins Leere.
  */
 function renderPair(view) {
-  fillPair(view.slots.pair, [
-    {
-      name: myLabel(store.load()),
-      done: true,
-      you: true,
-      el: view.editName ? nameInput(view) : null,
-      edit: view.editName ? null : () => editName(view),
-    },
-    { name: 'wer macht mit?', pending: true },
-  ])
+  const me = {
+    name: myLabel(store.load()),
+    done: true,
+    you: true,
+    el: view.editName ? nameInput(view) : null,
+    edit: view.editName ? null : () => editName(view),
+  }
+  // Solange nichts raus ist, steht dort die Lücke, die nach einer Person
+  // verlangt. Danach steht dort, wer schon einen Push bekommen hat.
+  const sent = view.sent ?? []
+  fillPair(view.slots.pair, sent.length
+    ? [me, ...sent.map((name) => ({ name, done: true }))]
+    : [me, { name: 'wer macht mit?', pending: true }])
 }
 
 /**
@@ -736,22 +974,30 @@ function syncPush(view) {
  */
 function showPushSent(view, result) {
   const state = store.load()
-  const sent = result === 'shared'
+  const shared = result === 'shared'
+
+  // Der offene Platz bekommt den Decknamen des Pushes, jede weitere Person
+  // einen eigenen daneben. An wen der Link ging, weiss die App nicht, aber
+  // «unterwegs» wäre ein Zustand und kein Gegenüber.
+  view.editName = false
+  view.sent = [...(view.sent ?? []), store.lastPushAlias(state) ?? 'Eine Person']
+  const n = view.sent.length
 
   view.slots.share.replaceChildren()
-  fillPair(view.slots.pair, [
-    { name: myLabel(state), done: true, you: true, edit: () => editName(view) },
-    { name: sent ? 'unterwegs' : 'Link bereit', done: true },
-  ])
-  view.slots.sharehow.textContent = sent
-    ? 'Der Push ist raus. Mehr braucht es nicht.'
-    : 'Der Link liegt in der Zwischenablage. Abschicken, dann ist der Push raus.'
+  renderPair(view)
+  view.slots.sharehow.textContent = shared
+    ? (n === 1
+      ? 'Der Push ist raus. Mehr braucht es nicht.'
+      : `${n} Pushes sind raus. Je mehr, desto besser.`)
+    : (n === 1
+      ? 'Der Link liegt in der Zwischenablage. Abschicken, dann ist der Push raus.'
+      : `Der Link liegt in der Zwischenablage. Abschicken, dann sind es ${n}.`)
 
   // Push zurückgegeben: der Hinweis dazu hat sich erledigt.
   if (!state.pushedBy) view.slots.pushback.hidden = true
 
   burst(view.slots.party)
-  revealSidequest(view, 'Noch jemand im Kopf?')
+  revealSidequest(view, n === 1 ? 'Noch jemand im Kopf?' : 'Es geht noch jemand.')
 }
 
 const PARTY_HUES = ['--hue-teal', '--hue-brick', '--hue-plum', '--hue-green', '--hue-blue']
@@ -855,10 +1101,16 @@ function requireName(view) {
   return false
 }
 
-/** Gelungenes Teilen bekommt `data-ok` und damit die Erfolgsform. */
-function report(statusEl, result) {
+/**
+ * Gelungenes Teilen bekommt `data-ok` und damit die Erfolgsform.
+ * @param {number} n Der wievielte Push auf diesem Screen. Ab dem zweiten
+ *   zählt die Meldung mit, sonst stünde zweimal dasselbe da.
+ */
+function report(statusEl, result, n = 1) {
   statusEl.textContent = {
-    shared: 'Geschickt. Der Push ist unterwegs.',
+    shared: n === 1
+      ? 'Geschickt. Der Push ist unterwegs.'
+      : `Geschickt. Jetzt sind ${n} Pushes unterwegs.`,
     copied: 'Link kopiert. Jetzt einfügen und abschicken.',
     failed: 'Hat nicht geklappt. Versuch es nochmal.',
   }[result]
@@ -876,7 +1128,7 @@ async function sendInvite(view, { extra = false } = {}) {
   const result = await share.share(
     { from: state.name, date: store.isoDay(), set: state.lastSet },
     `${state.name} hat gerade 10 Minuten für den Rücken gemacht. Machst du mit?`)
-  report(statusEl, result)
+  report(statusEl, result, (view.sent?.length ?? 0) + 1)
   if (result === 'failed') return null
 
   store.addPush()
@@ -1016,6 +1268,12 @@ function readyLine(state) {
  */
 function showReady({ from = [] } = {}) {
   const state = store.load()
+  // Der Zwischenschritt erklärt, was gleich kommt. Wer das schon einmal
+  // mitgemacht hat, weiss es und startet ohne ihn.
+  if (state.sessionCount > 0 || state.history.length > 0) {
+    startRun({ from })
+    return
+  }
   const view = screen('ready')
   view.slots.lead.textContent = readyLine(state)
   if (state.active?.done.length) view.slots.headline.textContent = 'Weiter gehts?'
@@ -1083,27 +1341,37 @@ function setupServiceWorker() {
  * Wer noch nichts gemacht hat und die App im Browser öffnet, bekommt erst die
  * Erklärung. Wer sie installiert geöffnet hat, hat sich längst entschieden.
  */
-function isNewcomer(state) {
-  return !state.history.length && !state.active && !state.sessionCount && !pwa.isStandalone()
+function isNewcomer() {
+  // Alles, was im Speicher liegt, ist eine Spur von früher: ein Name, eine
+  // Vorliebe, eine abgebrochene Einheit. Dann gehört der Start auf die
+  // Übersicht und nicht noch einmal auf die Erklärung.
+  return !store.hasData() && !pwa.isStandalone()
 }
 
 /**
- * Das Fragezeichen: dieselbe Erklärung wie beim ersten Besuch, jederzeit
- * erreichbar. Es liegt ausserhalb der Screens, darum wird es einmal
- * verdrahtet und nicht bei jedem Screen neu.
+ * Die beiden Knöpfe oben rechts: die Erklärung wie beim ersten Besuch und
+ * die Einstellungen. Beide liegen ausserhalb der Screens, darum werden sie
+ * einmal verdrahtet und nicht bei jedem Screen neu. Der Weg zurück führt
+ * dahin, wo man stand.
  */
-function setupHelp() {
-  const button = document.querySelector('[data-action="help"]')
-  button.addEventListener('click', () => showLanding(HELP_FROM[standing] ?? showHome))
+function setupTopButtons() {
+  const back = () => HELP_FROM[standing] ?? showHome
+  document.querySelector('[data-action="help"]')
+    .addEventListener('click', () => showLanding(back()))
+  document.querySelector('[data-action="settings-top"]')
+    .addEventListener('click', () => showSettings(back()))
 }
 
 function init() {
   store.abortIfStale()
+  // Vor dem ersten Screen: sonst stünde er kurz in der falschen Grösse oder
+  // im falschen Modus da.
+  applyLook()
   setupServiceWorker()
-  setupHelp()
+  setupTopButtons()
   incoming = share.decode()
   if (incoming) showInvite()
-  else if (isNewcomer(store.load())) showLanding()
+  else if (isNewcomer()) showLanding()
   else showHome()
 }
 

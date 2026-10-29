@@ -11,8 +11,11 @@
 <!-- Als App installierbar: Manifest, Icons, und ein Service Worker, den
      app.js anmeldet. Die Farbe der Systemleiste folgt dem Modus. -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#fbf8f4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#171412" media="(prefers-color-scheme: dark)">
+<!-- Beide Fassungen stehen hier, damit die Systemleiste schon vor dem ersten
+     Skript stimmt. Wer in den Einstellungen einen Modus festlegt, lässt
+     app.js das `media` der nicht gewählten auf `not all` setzen. -->
+<meta name="theme-color" content="#fbf8f4" media="(prefers-color-scheme: light)" data-mode="light">
+<meta name="theme-color" content="#171412" media="(prefers-color-scheme: dark)" data-mode="dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <!-- iOS liest kein Manifest. Was dort zählt, steht in diesen drei Zeilen. -->
@@ -41,6 +44,10 @@
   <symbol id="i-caret" viewBox="0 0 256 256"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
   <symbol id="i-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
   <symbol id="i-pencil" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/></symbol>
+  <!-- Zahnrad: selbst gezeichnet, nicht aus Phosphor. Ein Kranz mit acht
+       Zähnen und eine Nabe, als Ring in derselben Strichstärke wie die
+       anderen Symbole. Die Nullfüllung macht aus den Flächen die Ringe. -->
+  <symbol id="i-gear" viewBox="0 0 256 256"><path fill-rule="evenodd" d="M104.6,26.7L151.4,26.7L154.0,52.4L163.1,56.1L183.1,39.8L216.2,72.9L199.9,92.9L203.6,102.0L229.3,104.6L229.3,151.4L203.6,154.0L199.9,163.1L216.2,183.1L183.1,216.2L163.1,199.9L154.0,203.6L151.4,229.3L104.6,229.3L102.0,203.6L92.9,199.9L72.9,216.2L39.8,183.1L56.1,163.1L52.4,154.0L26.7,151.4L26.7,104.6L52.4,102.0L56.1,92.9L39.8,72.9L72.9,39.8L92.9,56.1L102.0,52.4ZM108.2,42.3L147.8,42.3L148.8,67.5L156.1,70.5L174.6,53.4L202.6,81.4L185.5,99.9L188.5,107.2L213.7,108.2L213.7,147.8L188.5,148.8L185.5,156.1L202.6,174.6L174.6,202.6L156.1,185.5L148.8,188.5L147.8,213.7L108.2,213.7L107.2,188.5L99.9,185.5L81.4,202.6L53.4,174.6L70.5,156.1L67.5,148.8L42.3,147.8L42.3,108.2L67.5,107.2L70.5,99.9L53.4,81.4L81.4,53.4L99.9,70.5L107.2,67.5ZM86,128a42,42 0 1,0 84,0a42,42 0 1,0 -84,0ZM102,128a26,26 0 1,0 52,0a26,26 0 1,0 -52,0Z"/></symbol>
   <symbol id="i-repeat" viewBox="0 0 256 256"><path d="M24,128A72.08,72.08,0,0,1,96,56H204.69L194.34,45.66a8,8,0,0,1,11.32-11.32l24,24a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32-11.32L204.69,72H96a56.06,56.06,0,0,0-56,56,8,8,0,0,1-16,0Zm200-8a8,8,0,0,0-8,8,56.06,56.06,0,0,1-56,56H51.31l10.35-10.34a8,8,0,0,0-11.32-11.32l-24,24a8,8,0,0,0,0,11.32l24,24a8,8,0,0,0,11.32-11.32L51.31,200H160a72.08,72.08,0,0,0,72-72A8,8,0,0,0,224,120Z"/></symbol>
 </svg>
 
@@ -58,11 +65,19 @@
   <button class="btn btn-small btn-primary" data-action="reload">Neu laden</button>
 </div>
 
-<!-- Die Erklärung bleibt erreichbar, auch wenn die App längst läuft: ein
-     Fragezeichen oben rechts. Im Training und auf der Erklärung selbst steht
-     es nicht da, dort führt es nirgends hin. -->
-<button class="helpbtn" data-action="help" title="So funktioniert friendly push"
-        aria-label="So funktioniert friendly push">?</button>
+<!-- Die beiden Wege, die jederzeit offen bleiben, auch wenn die App längst
+     läuft: die Erklärung und die Einstellungen. Sie stehen oben rechts und
+     sehen gleich aus, weil sie dasselbe sind: ein Nebenausgang. Im Training
+     und auf der Erklärung selbst stehen sie nicht da, dort führen sie
+     nirgends hin. -->
+<div class="topbtns">
+  <button class="helpbtn" data-action="settings-top" title="Einstellungen"
+          aria-label="Einstellungen">
+    <svg class="icon" aria-hidden="true"><use href="#i-gear"></use></svg>
+  </button>
+  <button class="helpbtn" data-action="help" title="So funktioniert friendly push"
+          aria-label="So funktioniert friendly push">?</button>
+</div>
 
 <!-- ------------------------------------------------- Landing -->
 <!-- Der Einstieg für alle, die die App noch nicht kennen, und ab dem
@@ -206,13 +221,16 @@
     </section>
 
     <section class="lp-band lp-band-brick">
-      <div class="lp-inner">
-        <p class="eyebrow">Warum</p>
-        <h2>Acht Stunden am Pult hinterlassen Spuren.</h2>
-        <p class="lead">Rundrücken, vorgezogene Schultern, ein vorgekipptes Becken.
-          Nichts davon kommt über Nacht, und nichts davon geht über Nacht weg. Es
-          braucht eine Gewohnheit, kein Programm. Zehn Minuten sind kurz genug,
-          dass man sie wirklich macht.</p>
+      <div class="lp-inner lp-side">
+        <img class="lp-side-icon" src="assets/lp-warum.svg" alt="" aria-hidden="true">
+        <div class="lp-side-text">
+          <p class="eyebrow">Warum</p>
+          <h2>Acht Stunden am Pult hinterlassen Spuren.</h2>
+          <p class="lead">Rundrücken, vorgezogene Schultern, ein vorgekipptes Becken.
+            Nichts davon kommt über Nacht, und nichts davon geht über Nacht weg. Es
+            braucht eine Gewohnheit, kein Programm. Zehn Minuten sind kurz genug,
+            dass man sie wirklich macht.</p>
+        </div>
       </div>
     </section>
 
@@ -268,7 +286,8 @@
             <p>Im Speicher deines Browsers, auf diesem Gerät, als ein einziger
               Eintrag. Es gibt keinen Server, der etwas davon sieht. Löschst du
               die Browserdaten oder die installierte App, ist der Verlauf weg.
-              Löschen kannst du alles hier oder am Ende der Übersicht.</p>
+              Ansehen und löschen kannst du alles hier oder in den
+              Einstellungen.</p>
             <div class="wipe" data-slot="wipe"></div>
           </details>
           <details>
@@ -417,6 +436,9 @@
 
         <div class="week" data-slot="week" data-hide-on-intro role="img" data-label=""></div>
         <p class="weekline" data-slot="weekline" data-hide-on-intro></p>
+        <!-- Das Wochenziel ist eine Untergrenze, keine Obergrenze. Das steht
+             direkt an der Zahl, sonst liest sie sich wie ein Soll. -->
+        <p class="note weekmore" data-slot="weekmore" data-hide-on-intro></p>
 
         <!-- Die offene Geste gehört zur Lage, darum steht sie als Karte in
              diesem Band. Sie ist ein Hinweis und keine Aufgabe: das Kreuz
@@ -443,11 +465,69 @@
       </div>
     </div>
 
-    <!-- Der Fuss: hier liegen die Daten, hier werden sie auch gelöscht. -->
-    <div class="lp-band screen-home-foot">
-      <div class="lp-inner">
-        <div class="wipe" data-slot="wipe"></div>
-      </div>
+  </section>
+</template>
+
+<!-- ------------------------------------------------- Einstellungen -->
+<!-- Drei Dinge, die zur Person gehören und nicht zur Einheit: wie sie heisst,
+     wie gross sie liest, wie hell sie es mag. Alles greift sofort, es gibt
+     nichts zu speichern und nichts zu bestätigen. -->
+<template id="screen-settings">
+  <section class="screen screen-settings">
+    <div class="topbar">
+      <button class="linkbtn linkbtn-lead" data-action="back">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+        Zurück
+      </button>
+    </div>
+    <h1>Einstellungen</h1>
+
+    <div class="setting">
+      <label class="setting-label" for="set-name">Dein Vorname</label>
+      <input class="field" id="set-name" type="text" maxlength="20"
+             autocomplete="given-name" enterkeyhint="done" placeholder="Vorname"
+             data-slot="name">
+      <p class="note">Steht in dem Link, den du weitergibst, damit die andere
+        Person sieht, von wem der Push kommt. Weiter kommt er nicht.</p>
+    </div>
+
+    <div class="setting">
+      <p class="setting-label" id="set-font-label">Schriftgrösse</p>
+      <div class="chips" data-slot="font" role="group" aria-labelledby="set-font-label"></div>
+    </div>
+
+    <div class="setting">
+      <p class="setting-label" id="set-theme-label">Erscheinungsbild</p>
+      <div class="chips" data-slot="theme" role="group" aria-labelledby="set-theme-label"></div>
+      <p class="note" data-slot="themenote"></p>
+    </div>
+
+    <!-- Die App sagt an jeder Ecke, dass nichts das Gerät verlässt. Dann soll
+         man auch nachsehen können, was da liegt: erst in Worten, darunter der
+         Eintrag, wie er wirklich im Speicher steht. Gelöscht wird an
+         derselben Stelle, an der man es gesehen hat. -->
+    <div class="setting">
+      <p class="setting-label" id="set-data-label">Daten</p>
+      <p class="note">Alles, was friendly push über dich weiss, liegt in einem
+        einzigen Eintrag im Speicher dieses Browsers. Es gibt keinen Server,
+        der etwas davon sieht.</p>
+      <details class="disclose">
+        <summary aria-describedby="set-data-label">Ansehen, was gespeichert ist
+          <svg class="icon disclose-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+        </summary>
+        <div class="disclose-body">
+          <dl class="datalist" data-slot="data"></dl>
+          <details class="disclose disclose-inner">
+            <summary>Der Eintrag selbst
+              <svg class="icon disclose-caret" aria-hidden="true"><use href="#i-caret"></use></svg>
+            </summary>
+            <div class="disclose-body">
+              <pre class="dataraw" data-slot="raw"></pre>
+            </div>
+          </details>
+        </div>
+      </details>
+      <div class="wipe" data-slot="wipe"></div>
     </div>
   </section>
 </template>
@@ -556,6 +636,7 @@
     <div class="stats">
       <div class="week" data-slot="week" role="img" data-label=""></div>
       <p class="weekline" data-slot="weekline"></p>
+      <p class="note weekmore" data-slot="weekmore"></p>
       <p class="note" data-slot="streak"></p>
     </div>
   </section>

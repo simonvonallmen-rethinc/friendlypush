@@ -36,6 +36,7 @@ const SHELL = [
   './assets/lp-fact-daten.svg',
   './assets/lp-fact-kosten.svg',
   './assets/lp-install.svg',
+  './assets/lp-warum.svg',
   './assets/lp-final.svg',
   './assets/icon-192.png',
   './assets/icon-512.png',

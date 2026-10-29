@@ -36,6 +36,10 @@
   --lp-max: 980px;
   --radius: 22px;
   --radius-lg: 32px;
+
+  /* Schriftgrösse als Faktor. Jede Grösse im Stylesheet rechnet damit, die
+     Einstellungen setzen ihn auf dem Wurzelelement um. */
+  --fs: 1;
   --shadow: 0 2px 4px rgb(36 31 27 / 4%), 0 12px 28px rgb(36 31 27 / 7%);
 
 
@@ -54,8 +58,13 @@
   --phone-frame: #15120f;
 }
 
+/* Der dunkle Modus kommt entweder vom System oder aus den Einstellungen.
+   Beide Wege tragen dieselben Werte, darum steht der Block zweimal: ein
+   Medienblock kann keine Deklarationen an eine zweite Bedingung weiterreichen.
+   Wer «Hell» gewählt hat, nimmt der Systemabfrage ihr Recht. Ändert sich
+   hier etwas, muss es in beiden Blöcken stehen. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     /* Aufgehellte Varianten der Figma-Hues, damit sie auf dunklen Flächen tragen. */
     --hue-teal-lift:  #7fc9b0;
     --hue-brick-lift: #e0987c;
@@ -79,11 +88,43 @@
   }
 }
 
+:root[data-theme='dark'] {
+  --hue-teal-lift:  #7fc9b0;
+  --hue-brick-lift: #e0987c;
+  --hue-plum-lift:  #d496bd;
+  --hue-green-lift: #96cf96;
+  --hue-blue-lift:  #7cbcdc;
+
+  --bg: #171412;
+  --surface: #221e1b;
+  --ink: #f3ece4;
+  --ink-soft: #a79b8f;
+  --line: #37302a;
+  --accent-text: var(--hue-teal-lift);
+  --tint-teal: var(--hue-teal-lift);
+  --tint-brick: var(--hue-brick-lift);
+  --tint-plum: var(--hue-plum-lift);
+  --tint-green: var(--hue-green-lift);
+  --tint-blue: var(--hue-blue-lift);
+  --shadow: 0 2px 4px rgb(0 0 0 / 25%), 0 12px 28px rgb(0 0 0 / 35%);
+  --phone-frame: #39312b;
+}
+
+/* Formularfelder, Scrollbalken und Auswahlfarben sollen dem gewählten Modus
+   folgen, nicht dem des Systems. */
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
 /* ------------------------------------------------------------------ Basis */
 * { box-sizing: border-box; }
 
 /* Manche Bausteine setzen display, das schlägt sonst das hidden-Attribut. */
 [hidden] { display: none !important; }
+
+/* iOS zoomt beim Hineintippen in jedes Feld unter 16px und bleibt danach
+   zoomt stehen. 16px ist darum eine Untergrenze und keine Vorliebe: die
+   Schriftgrösse aus den Einstellungen wirkt nur darüber hinaus. */
+input, textarea, select { font-size: max(16px, 1em); }
 
 /* Icons: Phosphor-Symbole aus dem Sprite in index.html. Sie messen in em,
    damit sie der Schriftgrösse ihres Knopfes folgen. */
@@ -105,7 +146,11 @@ body {
   background: var(--bg);
   color: var(--ink);
   font: 17px/1.5 ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: calc(17px * var(--fs));
   -webkit-text-size-adjust: 100%;
+  /* Doppeltipp zoomt nicht mehr. Aufziehen mit zwei Fingern bleibt möglich:
+     das ist die Geste, auf die Leute angewiesen sind, die schlecht sehen. */
+  touch-action: manipulation;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -128,7 +173,7 @@ body {
 }
 
 h1 {
-  font-size: clamp(26px, 7vw, 34px);
+  font-size: calc(clamp(26px, 7vw, 34px) * var(--fs));
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin: 0;
@@ -141,7 +186,7 @@ h1 {
 .tag {
   padding: 2px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs));
   letter-spacing: 0.06em;
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
   color: var(--accent-text);
@@ -149,7 +194,7 @@ h1 {
 
 .eyebrow {
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs));
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -160,7 +205,7 @@ h1 {
 
 .note {
   margin: 0;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs));
   color: var(--ink-soft);
   text-wrap: pretty;
 }
@@ -169,7 +214,7 @@ h1 {
   padding: 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   text-align: center;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs));
   color: var(--ink-soft);
 }
 
@@ -198,10 +243,13 @@ h1 {
   box-shadow: var(--shadow);
 }
 
-.btn-small { padding: 10px 16px; font-size: 15px; }
+.btn-small { padding: 10px 16px; font-size: calc(15px * var(--fs)); }
 
+/* Der zweite Weg auf einem Screen. Er trägt von sich aus eine Fläche, auch
+   wenn sie leise ist: ohne sie war er nur ein Stück Text und als Knopf erst
+   unter dem Zeiger zu erkennen, auf dem Handy also gar nicht. */
 .btn-quiet {
-  background: transparent;
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
   color: var(--ink-soft);
   padding: 12px 18px;
 }
@@ -235,11 +283,17 @@ h1 {
     border-color: color-mix(in oklab, var(--ink) 20%, var(--line));
   }
 
-  .btn-quiet:hover:not(:disabled),
   .chip:hover:not([aria-pressed='true']):not(:disabled),
   .linkbtn-lead:hover,
   .helpbtn:hover {
     background: color-mix(in oklab, var(--ink) 8%, transparent);
+    color: var(--ink);
+  }
+
+  /* Der zweite Weg trägt seine Fläche schon im Ruhezustand, also geht er
+     unter dem Zeiger eine Stufe weiter statt sie erst zu bekommen. */
+  .btn-quiet:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--ink) 15%, transparent);
     color: var(--ink);
   }
 
@@ -267,6 +321,8 @@ h1 {
 
   .faq summary:hover { color: var(--accent-text); }
   .faq summary:hover .faq-caret { color: inherit; }
+
+  .disclose summary:hover { color: var(--ink); }
 
   .ex-cue-toggle:hover { color: var(--ink); }
   .ex-cue-toggle:hover .ex-cue-caret { color: inherit; }
@@ -298,7 +354,7 @@ h1 {
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   border-radius: 999px;
   padding: 8px 16px;
-  font-size: 15px;
+  font-size: calc(15px * var(--fs));
   font-weight: 600;
   color: var(--accent-text);
 }
@@ -311,7 +367,7 @@ h1 {
   border-radius: 50%;
   background: color-mix(in srgb, var(--accent-text) 45%, var(--surface));
   color: var(--surface);
-  font-size: 11px;
+  font-size: calc(11px * var(--fs));
   line-height: 1;
 }
 
@@ -323,6 +379,9 @@ h1 {
   min-width: 0;
   padding: 0;
   font: inherit;
+  /* Unter 16px zoomt iOS beim Hineintippen in das Feld und bleibt danach
+     zoomt stehen. Darum ist 16px hier die Untergrenze, nicht eine Vorliebe. */
+  font-size: max(16px, calc(15px * var(--fs)));
   color: inherit;
   background: none;
   border: 0;
@@ -356,10 +415,28 @@ h1 {
   font-weight: 500;
 }
 
+/* Die Verbindung trägt die Farbe der Plätze, nicht einen eigenen Grauton:
+   sie gehört zum Paar und ist nicht die Lücke dazwischen. */
 .pair-link {
   flex: 0 0 22px;
-  height: 2px;
-  background: color-mix(in srgb, var(--accent-text) 45%, var(--line));
+  height: 3px;
+  border-radius: 999px;
+  background: var(--accent-text);
+}
+
+/* Passen die beiden Plätze nicht nebeneinander, stehen sie untereinander und
+   die Verbindung kippt mit: senkrecht und auf der Achse der Marken, damit
+   die zwei Plätze weiter als ein Paar zu lesen sind. Ob es reicht, hängt an
+   den Namen und nicht an der Fensterbreite, darum misst app.js und setzt das
+   Attribut, statt dass hier eine Medienabfrage riete. */
+.pair[data-stacked] { flex-direction: column; align-items: flex-start; }
+
+.pair[data-stacked] .pair-link {
+  flex: 0 0 14px;
+  width: 3px;
+  height: 14px;
+  /* Mitte der Marke im Platz: 16px Polsterung plus ihr halber Durchmesser. */
+  margin-left: calc(16px + 9px - 1.5px);
 }
 
 /* Push-Karte auf der Startseite: die offene Geste, falls es eine gibt. Sie
@@ -378,7 +455,7 @@ h1 {
   padding-right: 48px;
 }
 
-.pushcard p { margin: 0; font-size: 14px; color: var(--ink-soft); text-wrap: pretty; }
+.pushcard p { margin: 0; font-size: calc(14px * var(--fs)); color: var(--ink-soft); text-wrap: pretty; }
 
 .pushcard-hide {
   position: absolute;
@@ -389,7 +466,7 @@ h1 {
   width: 36px;
   height: 36px;
   padding: 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--fs));
 }
 
 /* Der Hinweis an die Person, die dich gepusht hat. Er steht in der
@@ -401,11 +478,11 @@ h1 {
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
   color: var(--accent-text);
-  font-size: 15px;
+  font-size: calc(15px * var(--fs));
   text-wrap: pretty;
 }
 
-.cheer { margin: 0; font-size: 44px; line-height: 1; }
+.cheer { margin: 0; font-size: calc(44px * var(--fs)); line-height: 1; }
 
 /* Die Zahlen stehen nach dem Push-Moment und treten einen Schritt zurück. */
 .stats {
@@ -429,7 +506,7 @@ h1 {
   background: none;
   border: 0;
   color: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs));
   line-height: 1;
   opacity: 0.6;
   cursor: pointer;
@@ -443,7 +520,7 @@ h1 {
   flex-wrap: wrap;
   gap: 4px 8px;
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs));
   color: var(--ink-soft);
 }
 
@@ -487,7 +564,7 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 15px;
+  font-size: calc(15px * var(--fs));
   font-weight: 700;
 }
 
@@ -539,9 +616,108 @@ body.is-home #app { padding: 0; }
 /* Zwei Kanten übereinander wären eine zu viel. */
 .screen-home .lp-band-green + .lp-band { border-top: 0; }
 
-/* Der Fuss trägt nur noch das Löschen. Er bleibt ohne eigene Fläche, damit er
-   mit der Fusszeile der Seite eine Zone bildet und nicht als Karte auftritt. */
-.screen-home-foot .lp-inner { padding: 28px 16px 24px; }
+/* Die Zahl der Woche und ihr Zusatz gehören zusammen. Mit dem vollen Abstand
+   des Bandes dazwischen läsen sie sich als zwei Aussagen. */
+.weekline + .weekmore { margin-top: -6px; }
+.lp-inner > .weekline + .weekmore { margin-top: -16px; }
+
+/* --------------------------------------------------------- Einstellungen */
+/* Drei Blöcke untereinander: Beschriftung, Bedienelement, bei Bedarf ein
+   Hinweis. Keine Karten und keine Trennlinien, der Abstand reicht. */
+.setting { display: flex; flex-direction: column; gap: 10px; }
+
+.setting-label {
+  margin: 0;
+  font-size: calc(14px * var(--fs));
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* Ein Feld mit eigener Form, anders als das Namensfeld im Paar: hier steht
+   es für sich und braucht eine Fläche, an der man sieht, wo getippt wird. */
+.field {
+  width: 100%;
+  padding: 12px 16px;
+  font: inherit;
+  font-size: max(16px, calc(17px * var(--fs)));
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.field:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* Die Gruppen stehen hier immer über die ganze Spalte: drei Lagen
+   nebeneinander, alle gleich gross zu treffen. */
+.screen-settings .chips { display: flex; align-self: stretch; }
+
+/* Ein Ausklapper mitten im Text, dieselbe Form wie die Fragen auf der
+   Erklärung, nur kleiner und ohne Liste drumherum. */
+.disclose { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+
+.disclose summary {
+  transition: color 120ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 2px;
+  font-size: calc(14px * var(--fs));
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclose summary::-webkit-details-marker { display: none; }
+
+.disclose-caret {
+  font-size: calc(16px * var(--fs));
+  transition: transform 150ms ease;
+}
+
+/* Nur der eigene Pfeil dreht, nicht der des inneren Ausklappers. */
+.disclose[open] > summary .disclose-caret { transform: rotate(180deg); }
+
+.disclose-body { padding: 0 2px 14px; display: flex; flex-direction: column; gap: 14px; }
+
+/* Der innere Ausklapper hängt an der Kante des äusseren, eine eigene untere
+   wäre eine Linie zu viel. */
+.disclose-inner { border-bottom: 0; }
+
+/* Begriff und Wert. Auf schmalen Geräten untereinander, sonst bliebe für die
+   Werte eine Spalte von zwei Zeichen Breite. */
+.datalist {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px 16px;
+  font-size: calc(14px * var(--fs));
+}
+
+.datalist dt { color: var(--ink-soft); }
+.datalist dd { margin: 0 0 8px; text-wrap: pretty; }
+
+@media (min-width: 420px) {
+  .datalist { grid-template-columns: max-content 1fr; align-items: baseline; }
+  .datalist dd { margin: 0; }
+}
+
+/* Der Eintrag im Original. Er bricht um, sonst schöbe er die Spalte auf. */
+.dataraw {
+  margin: 0;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: calc(12px * var(--fs));
+  line-height: 1.5;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 
 /* ------------------------------------------------------------------ Landing */
@@ -562,7 +738,7 @@ body.is-landing #app { padding: 0; }
 
 .screen-landing h2 {
   margin: 0;
-  font-size: clamp(21px, 5.4vw, 27px);
+  font-size: calc(clamp(21px, 5.4vw, 27px) * var(--fs));
   line-height: 1.2;
   letter-spacing: -0.01em;
   text-wrap: balance;
@@ -614,7 +790,7 @@ body.is-landing #app { padding: 0; }
 
 .lp-jump { display: none; gap: 18px; margin-right: 12px; }
 
-.lp-navcta { padding: 9px 16px; font-size: 14px; box-shadow: none; }
+.lp-navcta { padding: 9px 16px; font-size: calc(14px * var(--fs)); box-shadow: none; }
 
 /* -------------------------------------------------------- Bänder */
 .lp-band {
@@ -685,7 +861,7 @@ body.is-landing #app { padding: 0; }
 /* Der Satz, der die App erklärt, wenn man nur einen liest. */
 .lp-claim {
   margin: 0;
-  font-size: clamp(17px, 4.6vw, 20px);
+  font-size: calc(clamp(17px, 4.6vw, 20px) * var(--fs));
   line-height: 1.45;
   color: var(--ink-soft);
   text-wrap: pretty;
@@ -704,30 +880,41 @@ body.is-landing #app { padding: 0; }
 .lp-phones {
   position: relative;
   width: 100%;
-  max-width: 300px;
+  max-width: 360px;
   margin: 0 auto;
 }
 
 .lp-phone {
   position: relative;
   z-index: 1;
-  width: 100%;
+  /* Das vordere Gerät steht rechts und lässt links Platz für das hintere.
+     Als Anteil der Bühne, damit beide auch auf einem schmalen Handy
+     nebeneinander Platz haben und nicht über den Rand laufen. */
+  width: 78%;
   max-width: 300px;
-  margin: 4px auto 0;
+  margin: 4px 0 0 auto;
   padding: 10px;
   border-radius: 44px;
   background: var(--phone-frame);
   box-shadow: var(--shadow);
 }
 
-/* Das hintere Gerät trägt den Abschluss. Auf schmalen Geräten ist es nicht
-   da: dort steht die Bühne bereits so eng, dass ein zweites Gerät den Text
-   verdecken würde statt Tiefe zu geben. */
-.lp-phone-back { display: none; }
+/* Das hintere Gerät trägt den Abschluss: zwei Momente derselben Einheit, das
+   Training und das Weitergeben. Es steht gekippt links darunter und ist
+   reine Dekoration. */
+.lp-phone-back {
+  display: block;
+  position: absolute;
+  z-index: 0;
+  top: 4%;
+  left: 0;
+  width: 68%;
+  transform: rotate(-7deg);
+}
 
 .lp-phone-line {
   margin: 0;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs));
   line-height: 1.45;
   color: var(--ink-soft);
 }
@@ -740,13 +927,13 @@ body.is-landing #app { padding: 0; }
 .lp-phone .peer {
   gap: 5px;
   padding: 5px 9px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs));
 }
 
 .lp-phone .peer b {
   width: 13px;
   height: 13px;
-  font-size: 8px;
+  font-size: calc(8px * var(--fs));
 }
 
 .lp-phone .pair-link { flex-basis: 14px; }
@@ -778,8 +965,8 @@ body.is-landing #app { padding: 0; }
 }
 
 .lp-phone-head { display: flex; flex-direction: column; gap: 2px; }
-.lp-phone-head .eyebrow { font-size: 10px; }
-.lp-phone-head b { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.lp-phone-head .eyebrow { font-size: calc(10px * var(--fs)); }
+.lp-phone-head b { font-size: calc(17px * var(--fs)); font-weight: 600; letter-spacing: -0.01em; }
 
 .lp-phone-figure {
   flex: 1 1 auto;
@@ -805,7 +992,7 @@ body.is-landing #app { padding: 0; }
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--surface);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs));
 }
 
 .lp-phone-fill {
@@ -816,9 +1003,9 @@ body.is-landing #app { padding: 0; }
 }
 
 .lp-phone-timer > :not(.lp-phone-fill) { position: relative; }
-.lp-phone-icon { font-size: 15px; color: var(--accent-text); }
+.lp-phone-icon { font-size: calc(15px * var(--fs)); color: var(--accent-text); }
 .lp-phone-time { font-weight: 600; font-variant-numeric: tabular-nums; }
-.lp-phone-note { margin-left: auto; font-size: 11px; color: var(--ink-soft); }
+.lp-phone-note { margin-left: auto; font-size: calc(11px * var(--fs)); color: var(--ink-soft); }
 
 .lp-phone-next {
   display: flex;
@@ -829,7 +1016,7 @@ body.is-landing #app { padding: 0; }
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 14px;
+  font-size: calc(14px * var(--fs));
   font-weight: 600;
 }
 
@@ -880,7 +1067,7 @@ body.is-landing #app { padding: 0; }
 
 .lp-facts b { font-weight: 600; }
 
-.lp-facts span { font-size: 14px; color: var(--ink-soft); text-wrap: pretty; }
+.lp-facts span { font-size: calc(14px * var(--fs)); color: var(--ink-soft); text-wrap: pretty; }
 
 /* -------------------------------------------------------- Band mit Icon */
 /* Ein Band, dessen Text eine Spalte bleibt und daneben ein Icon trägt. Auf
@@ -933,7 +1120,7 @@ body.is-landing #app { padding: 0; }
 .faq summary::-webkit-details-marker { display: none; }
 
 .faq-caret {
-  font-size: 18px;
+  font-size: calc(18px * var(--fs));
   color: var(--ink-soft);
   transition: transform 150ms ease;
 }
@@ -947,31 +1134,26 @@ body.is-landing #app { padding: 0; }
   text-wrap: pretty;
 }
 
-/* Löschen steht am Ende der Übersicht, leise: ein unterstrichener Link, der
-   erst nachfragt. Wer ihn sucht, findet ihn, und sonst fällt er nicht auf. */
+/* Löschen steht leise da: ein unterstrichener Link, der erst nachfragt. Wer
+   ihn sucht, findet ihn, und sonst fällt er nicht auf. Er steht an beiden
+   Orten im Lesefluss, also linksbündig wie alles daneben. */
 .wipe {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   margin-top: 6px;
-  text-align: center;
+  text-align: left;
 }
 
 .wipe-ask { text-decoration: underline; text-underline-offset: 3px; }
 
-.wipe-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px; }
+.wipe-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 
-/* In der Antwort steht er im Lesefluss und damit linksbündig. */
-.faq .wipe {
-  align-items: flex-start;
-  margin: 0;
-  padding: 0 2px 16px;
-  text-align: left;
-}
+/* In der Antwort trägt er die Polsterung der Antwort, nicht ihren Abstand. */
+.faq .wipe { margin: 0; padding: 0 2px 16px; }
 
 .faq .wipe p { padding: 0; }
-.faq .wipe-row { justify-content: flex-start; }
 
 /* -------------------------------------------------------- Abschluss */
 .lp-final .lp-cta { width: 100%; }
@@ -1018,21 +1200,13 @@ body.is-landing #app { padding: 0; }
   .lp-side-icon { align-self: center; width: 238px; }
 }
 
-/* Das hintere Gerät kostet 120 Pixel Bühne, und die fehlen dem Text. Darum
-   kommt es erst, wenn die Spalte beides trägt: davor steht das vordere
-   allein und der Hero sieht aus wie bisher. */
+/* Ab dieser Breite trägt die Spalte beide Geräte in voller Grösse statt als
+   Anteil der Bühne. */
 @media (min-width: 900px) {
   .lp-phones { flex: 0 0 420px; max-width: 420px; }
 
-  .lp-phone-back {
-    display: block;
-    position: absolute;
-    z-index: 0;
-    top: 3%;
-    left: 0;
-    width: 270px;
-    transform: rotate(-7deg);
-  }
+  .lp-phone { width: 300px; }
+  .lp-phone-back { top: 3%; width: 270px; }
 }
 
 /* ------------------------------------------------------------------ Update */
@@ -1051,7 +1225,7 @@ body.is-landing #app { padding: 0; }
   justify-content: space-between;
   gap: 12px;
   padding: 10px 10px 10px 18px;
-  font-size: 15px;
+  font-size: calc(15px * var(--fs));
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1064,17 +1238,22 @@ body.is-landing #app { padding: 0; }
   to   { opacity: 1; transform: none; }
 }
 
-/* ------------------------------------------------------------------ Hilfe */
-/* Das Fragezeichen führt auf die Landing, die auch die Erklärung ist. Es
-   steht fix oben rechts, aber nur auf den Screens, von denen aus es einen Weg
+/* ------------------------------------------------------------- Nebenausgänge */
+/* Fragezeichen und Zahnrad: die Erklärung und die Einstellungen. Sie stehen
+   fix oben rechts, aber nur auf den Screens, von denen aus es einen Weg
    zurück gibt: nicht im Training, nicht auf der Erklärung selbst. */
-.helpbtn {
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+.topbtns {
   position: fixed;
   z-index: 8;
   top: max(10px, env(safe-area-inset-top));
   right: 10px;
   display: none;
+  gap: 8px;
+}
+
+.helpbtn {
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
@@ -1090,10 +1269,13 @@ body.is-landing #app { padding: 0; }
   cursor: pointer;
 }
 
-body.has-help .helpbtn { display: grid; }
+/* Das Zahnrad trägt ein Symbol und keine Ziffer, es braucht etwas mehr. */
+.helpbtn .icon { font-size: calc(20px * var(--fs)); }
+
+body.has-help .topbtns { display: flex; }
 
 /* Die Meldung über die neue Fassung sitzt am selben Platz und ist wichtiger. */
-body.has-toast .helpbtn { display: none; }
+body.has-toast .topbtns { display: none; }
 
 /* ------------------------------------------------------------------ Ziel */
 /* Die Woche als sieben Tage, nicht als Bruchzahl: man soll sehen, wie viel
@@ -1112,8 +1294,8 @@ body.has-toast .helpbtn { display: none; }
   border: 1px solid var(--line);
 }
 
-.day i { font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink-soft); }
-.day b { font-size: 14px; line-height: 1; min-height: 14px; }
+.day i { font-style: normal; font-size: calc(11px * var(--fs)); font-weight: 600; color: var(--ink-soft); }
+.day b { font-size: calc(14px * var(--fs)); line-height: 1; min-height: 14px; }
 
 .day[data-future] { background: none; border-style: dashed; opacity: 0.6; }
 .day[data-today] { border-color: var(--ink-soft); border-width: 2px; }
@@ -1125,7 +1307,7 @@ body.has-toast .helpbtn { display: none; }
 }
 .day[data-done] i { color: inherit; opacity: 0.75; }
 
-.weekline { margin: 0; font-size: 17px; font-weight: 600; text-wrap: pretty; }
+.weekline { margin: 0; font-size: calc(17px * var(--fs)); font-weight: 600; text-wrap: pretty; }
 
 /* ------------------------------------------------------------------ Übungsliste */
 .topbar {
@@ -1160,8 +1342,8 @@ button.exercise-card {
 button.exercise-card:active { transform: scale(0.995); }
 
 .exercise-head { display: flex; flex-direction: column; gap: 2px; }
-.exercise-head h2 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
-.exercise-head p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.exercise-head h2 { margin: 0; font-size: calc(18px * var(--fs)); letter-spacing: -0.01em; }
+.exercise-head p { margin: 0; font-size: calc(13px * var(--fs)); color: var(--ink-soft); }
 
 .exercise-figure {
   background: var(--card-bg);
@@ -1172,11 +1354,11 @@ button.exercise-card:active { transform: scale(0.995); }
 /* ------------------------------------------------------------------ Editor */
 /* Minimale Vektor-Werkzeuge: Kreis für ein Gelenk, Raute für den
    Kontrollpunkt einer Kurve, gestrichelte Führung dazwischen. */
-.legend { font-size: 13px; }
+.legend { font-size: calc(13px * var(--fs)); }
 
 .field textarea {
   font: inherit;
-  font-size: 16px;
+  font-size: calc(16px * var(--fs));
   line-height: 1.45;
   color: var(--ink);
   background: var(--surface);
@@ -1274,7 +1456,7 @@ button.exercise-card:active { transform: scale(0.995); }
 
 .ex-next [data-slot="step"] {
   font-variant-numeric: tabular-nums;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs));
   opacity: 0.7;
 }
 
@@ -1285,7 +1467,7 @@ button.exercise-card:active { transform: scale(0.995); }
   border: 0;
   padding: 4px 0;
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs));
   color: var(--ink-soft);
   cursor: pointer;
   white-space: nowrap;
@@ -1298,7 +1480,7 @@ button.exercise-card:active { transform: scale(0.995); }
   gap: 6px;
 }
 
-.linkbtn-lead .icon { font-size: 15px; }
+.linkbtn-lead .icon { font-size: calc(15px * var(--fs)); }
 
 /* Platz für die Leiste, sonst verdeckt sie das Ende des Inhalts.
    Sie hat drei Zeilen: Fortschritt, Dosis, Schritte. Dieselbe Zahl braucht
@@ -1327,7 +1509,7 @@ body.has-bar .footer { display: none; }
   width: 40px;
   height: 40px;
   padding: 0;
-  font-size: 20px;
+  font-size: calc(20px * var(--fs));
 }
 
 /* Die Fläche trägt den Screen, also darf sie die freie Höhe nehmen. Ihr Ton
@@ -1366,7 +1548,7 @@ body.has-bar .footer { display: none; }
   width: 100%;
   padding: 10px 0 0;
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs));
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1377,11 +1559,14 @@ body.has-bar .footer { display: none; }
 }
 
 .ex-cue-caret {
-  font-size: 18px;
+  font-size: calc(18px * var(--fs));
+  /* Zugeklappt zeigt er nach oben, aufgeklappt nach unten. Beim Aufklappen
+     dreht er in derselben Richtung weiter, darum 360 statt zurück auf 0. */
+  transform: rotate(180deg);
   transition: transform 180ms ease;
 }
 
-.ex-cue[data-open] .ex-cue-caret { transform: rotate(180deg); }
+.ex-cue[data-open] .ex-cue-caret { transform: rotate(360deg); }
 
 .ex-cue-body {
   display: grid;
@@ -1467,7 +1652,7 @@ body.has-bar .footer { display: none; }
 
 .prefs:empty { display: none; }
 
-.prefs-label { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.prefs-label { margin: 0; font-size: calc(14px * var(--fs)); color: var(--ink-soft); }
 
 /* Eine Gruppe, nicht zwei Knöpfe: der gemeinsame Rahmen sagt, dass genau
    eine der beiden Lagen gilt und ein Tippen die andere wählt. */
@@ -1484,7 +1669,7 @@ body.has-bar .footer { display: none; }
 .chip {
   flex: 1 1 auto;
   font: inherit;
-  font-size: 15px;
+  font-size: calc(15px * var(--fs));
   padding: 8px 16px;
   border: 0;
   border-radius: 999px;
@@ -1550,17 +1735,17 @@ body.has-bar .footer { display: none; }
 
 .timer > :not(.timer-fill) { position: relative; }
 
-.timer-icon { font-size: 20px; color: var(--accent-text); }
+.timer-icon { font-size: calc(20px * var(--fs)); color: var(--accent-text); }
 
 .timer-label {
-  font-size: 19px;
+  font-size: calc(19px * var(--fs));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   min-width: 2.5ch;
 }
 
-.timer-note { margin-left: auto; font-size: 13px; color: var(--ink-soft); }
+.timer-note { margin-left: auto; font-size: calc(13px * var(--fs)); color: var(--ink-soft); }
 
 .timer[data-state="running"] { border-color: var(--accent-text); }
 
@@ -1589,16 +1774,16 @@ body.has-bar .footer { display: none; }
   color: var(--ink);
 }
 
-.reps .icon { font-size: 20px; color: var(--accent-text); }
+.reps .icon { font-size: calc(20px * var(--fs)); color: var(--accent-text); }
 
 .reps-count {
-  font-size: 15px;
+  font-size: calc(15px * var(--fs));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
-.reps-note { font-size: 15px; color: var(--ink-soft); }
+.reps-note { font-size: calc(15px * var(--fs)); color: var(--ink-soft); }
 
 /* Zurück: nur der Pfeil, quadratisch neben dem Weiter-Knopf. */
 .ex-prev {
@@ -1608,7 +1793,7 @@ body.has-bar .footer { display: none; }
   padding: 0;
   display: grid;
   place-items: center;
-  font-size: 20px;
+  font-size: calc(20px * var(--fs));
   line-height: 1;
 }
 
@@ -1629,12 +1814,12 @@ body.has-bar .footer { display: none; }
 
 /* Übersprungen: dieselbe Farbe wie erledigt, nur transparent gefüllt.
    Angefasst, aber nicht abgehakt. */
-.progress i[data-skip] { background: color-mix(in srgb, var(--accent-text) 30%, transparent); }
+.progress i[data-skip] { background: color-mix(in srgb, var(--accent-text) 50%, transparent); }
 
 /* ------------------------------------------------------------------ Abschluss */
 .share { display: flex; flex-direction: column; gap: 10px; }
 
-.status { margin: 0; min-height: 1.5em; font-size: 14px; color: var(--ink-soft); }
+.status { margin: 0; min-height: 1.5em; font-size: calc(14px * var(--fs)); color: var(--ink-soft); }
 
 /* Geteilt: aus der grauen Statuszeile wird die Erfolgsmeldung. */
 .status[data-ok] {
@@ -1643,7 +1828,7 @@ body.has-bar .footer { display: none; }
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
   color: var(--accent-text);
-  font-size: 15px;
+  font-size: calc(15px * var(--fs));
   font-weight: 600;
 }
 

@@ -1,4 +1,5 @@
-🚀 Beta: Die Idee steht. Alles andere ist noch experimentell und kann sich jeden Tag ändern. Die Übungen sind bisher Platzhalter und werden später verfeinert, ergänzt oder ersetzt. Stay tuned!
+#### 🚀 Beta: Die Idee steht. Alles andere ist noch experimentell und kann sich jeden Tag ändern. Die Übungen sind bisher Platzhalter und werden später verfeinert, ergänzt oder ersetzt. Stay tuned!
+
 
 # friendly push
 
@@ -14,10 +15,10 @@ Ein Fun-Side-Projekt und Experiment: eine Fitness-App, die unterhaltsam ist und 
 
 ## Wie es gemacht ist
 
-- **Code**: Vibe coded
-- **Illustrationen**: Handgezeichnet
-- **Texte**: Generiert
-- Insgesamt experimentell. Keine Garantie auf saubere Architektur, Tests oder Rückwärtskompatibilität.
+- **Code:** Vibe coded
+- **Illustrationen:** Handgezeichnet (dgital)
+- **Texte:** Generiert
+- **Insgesamt:** Experimentell. Keine Garantie auf saubere Architektur, Tests oder Rückwärtskompatibilität.
 
 
 ## Stand und Ziel

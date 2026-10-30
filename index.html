@@ -17,7 +17,12 @@
 <meta name="theme-color" content="#fbf8f4" media="(prefers-color-scheme: light)" data-mode="light">
 <meta name="theme-color" content="#171412" media="(prefers-color-scheme: dark)" data-mode="dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<!-- Das Icon liegt randlos vor, ohne eigene runde Ecke: die schneidet das
+     System selbst, und eine zweite darunter sähe wie eine erhabene Platte aus.
+     `precomposed` hielt bis iOS 6 den Glanz fern, schadet seither nicht. Den
+     Glanz von iOS 26 kann eine Web-App nicht abschalten. -->
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="assets/apple-touch-icon.png">
 <!-- iOS liest kein Manifest. Was dort zählt, steht in diesen drei Zeilen. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -568,6 +573,9 @@
         <div class="ex-head-text">
           <p class="eyebrow" data-slot="slot"></p>
           <h1 data-slot="name"></h1>
+          <!-- Woran man die Übung erkennt, bevor man anfängt: Lage und
+               Hilfsmittel. -->
+          <p class="ex-attrs" data-slot="attrs"></p>
         </div>
         <!-- Überspringen gehört zum Kopf der Übung, nicht zur Daumenleiste. -->
         <button class="linkbtn ex-skip" data-action="skip" aria-label="Übung überspringen" title="Überspringen">

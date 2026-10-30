@@ -9,7 +9,7 @@
 // Der Name des Caches wird trotzdem gepflegt: er wirft beim Aktivieren alles
 // weg, was aus einer früheren Fassung stammt.
 
-const CACHE = 'friendly-push-v2'
+const CACHE = 'friendly-push-v3'
 
 // Nach wie vielen Millisekunden ohne Antwort der Cache einspringt. Ein Handy
 // im Funkloch antwortet nicht mit einem Fehler, es antwortet gar nicht.

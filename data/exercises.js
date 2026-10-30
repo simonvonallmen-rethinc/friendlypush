@@ -3,7 +3,9 @@
 //
 // Übungspool. Drei bis vier Varianten pro Slot, aufsteigend nach `difficulty`.
 // Die Illustration liegt als uebungen/<id>/illustration.svg daneben,
-// `illu` sagt, ob sie da ist.
+// `illu` sagt, ob sie da ist. Liegen stattdessen Einzelposen im Ordner
+// (pos-1.svg, pos-2.svg …), sagt `frames`, wie viele: die App spielt sie als
+// Daumenkino in Schleife und lässt die fertige Illustration liegen.
 
 export const EXERCISES = [
   // ---------------------------------------------------------------- Slot 1
@@ -53,6 +55,7 @@ export const EXERCISES = [
     position: 'floor',
     difficulty: 1,
     illu: true,
+    frames: 2,
   },
   {
     id: 'pull-boden-rudern',
@@ -255,24 +258,104 @@ export const EXERCISES = [
   },
 ]
 
-/** Varianten eines Slots, aufsteigend nach difficulty. */
+
 /**
- * Varianten eines Slots. Ohne Boden bleiben nur Übungen im Stehen oder
- * Sitzen. Gibt es für einen Slot keine, kommt die volle Liste zurück: lieber
- * eine Bodenübung als ein leerer Slot.
+ * Die Merkmale einer Übung, in der Reihenfolge, in der sie überall stehen.
+ * Welche Werte es gibt, sagt der Pool: eine neue Lage oder ein neues
+ * Hilfsmittel in uebung.md steht ohne Codeänderung in der Auswahl. Fehlt eine
+ * Beschriftung, steht der Wert selber da, statt dass die Zeile leer bleibt.
  */
-export function variantsFor(slotId, { floor = true } = {}) {
+export const ATTRS = [
+  {
+    key: 'position',
+    label: 'Lage',
+    labels: {
+      floor: 'Am Boden',
+      standing: 'Im Stehen',
+      seated: 'Im Sitzen',
+    },
+  },
+  {
+    key: 'equipment',
+    label: 'Hilfsmittel',
+    labels: {
+      none: 'Ohne Hilfsmittel',
+      band: 'Mit Band',
+      wall: 'An der Wand',
+      chair: 'Mit Stuhl',
+    },
+  },
+]
+
+/**
+ * Am Arbeitsplatz: im Stehen, ohne Hilfsmittel. Der eine Fall, für den die App
+ * gemacht ist, steht darum als fester Filter da und nicht als Auswahl.
+ */
+export const WORK_FILTER = { position: ['standing'], equipment: ['none'] }
+
+/** Die zwei Arten, einen Filter zu bekommen. */
+export const MODES = [
+  { id: 'work', label: 'Am Arbeitsplatz' },
+  { id: 'free', label: 'Andere' },
+]
+
+/** Beschriftung eines Merkmalswerts. */
+export function attrLabel(key, value) {
+  return ATTRS.find((a) => a.key === key)?.labels[value] ?? value
+}
+
+/** Welche Werte eines Merkmals im Pool vorkommen, alphabetisch. */
+export function attrValues(key) {
+  return [...new Set(EXERCISES.map((e) => e[key]).filter(Boolean))].sort()
+}
+
+/** Die Merkmale mit ihren vorkommenden Werten, für die Auswahl. */
+export function facets() {
+  return ATTRS
+    .map((a) => ({ key: a.key, label: a.label, values: attrValues(a.key) }))
+    .filter((a) => a.values.length > 1)
+}
+
+/** Die Merkmale einer Übung, zum Anzeigen. */
+export function attrsOf(exercise) {
+  return ATTRS
+    .filter((a) => exercise[a.key])
+    .map((a) => ({ key: a.key, value: exercise[a.key], label: attrLabel(a.key, exercise[a.key]) }))
+}
+
+/**
+ * Ob eine Übung zum Filter passt. Ein Merkmal, das der Filter nicht nennt oder
+ * leer lässt, schränkt nicht ein: so bleibt ein gespeicherter Filter gültig,
+ * wenn der Pool ein Merkmal dazubekommt.
+ */
+export function matches(exercise, filter = {}) {
+  return ATTRS.every((a) => {
+    const allowed = filter?.[a.key]
+    return !Array.isArray(allowed) || allowed.length === 0 || allowed.includes(exercise[a.key])
+  })
+}
+
+/** Der Filter, der aus den Vorlieben folgt. */
+export function filterFor(prefs = {}) {
+  return prefs.mode === 'free' ? (prefs.filter ?? {}) : WORK_FILTER
+}
+
+/**
+ * Varianten eines Slots, aufsteigend nach difficulty und gefiltert nach den
+ * Merkmalen. Passt keine, kommt die volle Liste zurück: lieber eine Übung, die
+ * nicht ganz passt, als ein leerer Slot.
+ */
+export function variantsFor(slotId, filter = {}) {
   const all = EXERCISES
     .filter((e) => e.slot === slotId)
     .sort((a, b) => a.difficulty - b.difficulty)
-  if (floor) return all
-  const upright = all.filter((e) => e.position !== 'floor')
-  return upright.length ? upright : all
+  const fit = all.filter((e) => matches(e, filter))
+  return fit.length ? fit : all
 }
 
-/** Slots, für die es überhaupt eine Übung ohne Boden gibt. */
-export function uprightSlots() {
-  return new Set(EXERCISES.filter((e) => e.position !== 'floor').map((e) => e.slot))
+/** Slots, für die der Filter wirklich eine Übung übrig lässt. */
+export function slotsMatching(filter) {
+  return new Set(EXERCISES.filter((e) => matches(e, filter)).map((e) => e.slot))
 }
 
 export function byId(id) {
@@ -286,8 +369,8 @@ export function byId(id) {
  * Die allererste Einheit nimmt überall die leichteste Variante. Erst danach
  * greift der Slot-Offset, damit sich nicht alle Slots gleichzeitig umstellen.
  */
-export function pickExercise(slot, sessionCount, opts = {}) {
-  const variants = variantsFor(slot.id, opts)
+export function pickExercise(slot, sessionCount, filter = {}) {
+  const variants = variantsFor(slot.id, filter)
   if (sessionCount === 0) return variants[0]
   return variants[(sessionCount + slot.offset) % variants.length]
 }

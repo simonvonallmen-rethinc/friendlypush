@@ -23,6 +23,9 @@ const POOL = join(ROOT, 'data', 'exercises.js')
 const MD = 'uebung.md'
 const SVG = 'illustration.svg'
 
+/** Einzelposen für das Daumenkino: pos-1.svg, pos-2.svg und so weiter. */
+const frameFile = (n) => `pos-${n}.svg`
+
 const FIELDS = ['name', 'slot', 'dose', 'equipment', 'position', 'difficulty']
 
 const exists = (p) => stat(p).then(() => true, () => false)
@@ -32,6 +35,17 @@ function cueOf(body) {
   return (body.split(/\n\s*\n/)[0] ?? '').trim()
 }
 
+/**
+ * Wie viele Posen im Ordner liegen. Gezählt wird nur die lückenlose Reihe ab
+ * pos-1.svg: eine Lücke wäre ein Loch im Ablauf, und ein Bild, das keiner
+ * sieht, meldet sich besser gar nicht erst.
+ */
+async function framesOf(id) {
+  let n = 0
+  while (await exists(join(DIR, id, frameFile(n + 1)))) n++
+  return n
+}
+
 export async function readFolder(id) {
   const { data, body } = parse(await readFile(join(DIR, id, MD), 'utf8'))
   return {
@@ -39,6 +53,7 @@ export async function readFolder(id) {
     ...Object.fromEntries(FIELDS.map((k) => [k, data[k]])),
     cue: cueOf(body),
     illu: await exists(join(DIR, id, SVG)),
+    frames: await framesOf(id),
   }
 }
 

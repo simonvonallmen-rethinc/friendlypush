@@ -4,9 +4,9 @@
 // und iOS brauchen. Gerastert wird mit dem Chrome, der ohnehin auf dem Rechner
 // ist: ein Paket dafür wäre die einzige Abhängigkeit des Projekts.
 //
-// Die maskable-Fassung wird aus derselben Datei gerechnet, nicht daneben
-// gepflegt. Zwei Quellen für dasselbe Bild heisst, dass eine davon irgendwann
-// veraltet.
+// Die Quelle liefert nur die Zeichnung: eine Kachel und die Figur darauf. Wie
+// weit die Farbe nach aussen geht, entscheidet die Fassung, nicht die Datei.
+// Zwei Quellen für dasselbe Bild heisst, dass eine davon irgendwann veraltet.
 //
 //   node dev/icons.mjs
 //   CHROME=/Pfad/zu/chrome node dev/icons.mjs
@@ -24,43 +24,64 @@ const CHROME = process.env.CHROME
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 
 const SOURCE = 'assets/icon.svg'
+const MANIFEST = 'manifest.webmanifest'
 
+// `bleed` heisst: Markenfarbe bis an den Rand, ohne eigene runde Ecke. Das ist
+// die Fassung für alles, was das System selbst in eine Form stanzt. Liegt die
+// runde Ecke schon im Bild, stanzt iOS ein zweites Mal darüber und legt seit
+// iOS 26 den Glanz auf die Kante: das sieht aus wie eine erhabene Platte.
+// Ohne `bleed` bleibt die Kachel als Kachel sichtbar, für Tab, Manifest und
+// Link-Vorschau, wo niemand etwas wegschneidet.
 const JOBS = [
-  { to: 'assets/icon-192.png',         size: 192 },
-  { to: 'assets/icon-512.png',         size: 512 },
-  { to: 'assets/apple-touch-icon.png', size: 180 },
-  { to: 'assets/icon-maskable-512.png', size: 512, maskable: true },
+  { to: 'assets/icon-192.png',          size: 192 },
+  { to: 'assets/icon-512.png',          size: 512 },
+  { to: 'assets/apple-touch-icon.png',  size: 180, bleed: true },
+  { to: 'assets/icon-maskable-512.png', size: 512, bleed: true, inset: 0.8 },
 ]
+
+/** Kachel, Figur und die beiden Farben, aus Quelle und Manifest. */
+async function parts() {
+  const svg = await readFile(join(ROOT, SOURCE), 'utf8')
+  const d = [...svg.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map(m => m[1])
+  if (d.length !== 2) {
+    throw new Error(`${SOURCE} braucht zwei Pfade (Kachel, Figur), gefunden: ${d.length}`)
+  }
+  const fills = [...svg.matchAll(/fill="(#[0-9a-fA-F]{3,8})"/g)].map(m => m[1])
+  const manifest = JSON.parse(await readFile(join(ROOT, MANIFEST), 'utf8'))
+  return {
+    tile: d[0], glyph: d[1],
+    brand: fills[0],
+    // Die helle Farbe steht im Manifest, damit Icon und Startbildschirm der
+    // App nicht auseinanderlaufen.
+    paper: manifest.background_color,
+  }
+}
 
 /**
  * Dieselbe Zeichnung für einen Ausschnitt, dessen Form das System bestimmt.
  *
  * Android stanzt aus einem maskable-Icon einen Kreis, ein Quadrat mit runden
- * Ecken oder sonst etwas. Sicher ist nur die mittlere Fläche von 80 Prozent.
- * Darum: Hintergrund randlos, Zeichnung auf 0.76 um die Mitte geschrumpft. Die
- * Farbe kommt aus der Datei selbst, damit ein Umfärben beide Fassungen trifft.
+ * Ecken oder sonst etwas. Sicher ist nur die mittlere Fläche von 80 Prozent,
+ * darum schrumpft `inset` die Figur um die Mitte. Der Hintergrund bleibt
+ * randlos: was das System wegschneidet, ist dann nur Farbe.
  */
-function maskable(svg) {
-  const bg = svg.match(/fill="(#[0-9a-fA-F]{3,8})"/)?.[1] ?? '#2f6f5e'
-  // Die Quelle wird verschachtelt, nicht aufgeschnitten: ihre Wurzel trägt
-  // `fill="none"`, und ohne das würde jeder gestrichene Bogen zur gefüllten
-  // Fläche. Verschachtelte SVG kann SVG, die Verweise auf defs halten.
-  // Der Rahmen der Quelle schrumpft mit: so steht genau das gezeichnete Bild
-  // da, nur kleiner und mit Hintergrund ringsum. Was darüber hinausragt,
-  // schneidet die Quelle selbst ab, wie sie es immer tut.
-  const nested = svg.replace(/^[\s\S]*?(?=<svg)/, '')
+function compose({ tile, glyph, brand, paper }, { bleed, inset = 1 }) {
+  const ground = bleed
+    ? `<rect width="512" height="512" fill="${brand}"/>`
+    : `<rect width="512" height="512" fill="${paper}"/><path fill="${brand}" d="${tile}"/>`
+  const figure = `<path fill="${paper}" d="${glyph}"/>`
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-<rect width="512" height="512" fill="${bg}"/>
-<g transform="translate(256 256) scale(0.76) translate(-256 -256)">${nested}</g>
+${ground}
+${inset === 1 ? figure
+    : `<g transform="translate(256 256) scale(${inset}) translate(-256 -256)">${figure}</g>`}
 </svg>`
 }
 
+const drawing = await parts()
 const work = await mkdtemp(join(tmpdir(), 'fp-icons-'))
 try {
-  const source = await readFile(join(ROOT, SOURCE), 'utf8')
-
   for (const job of JOBS) {
-    const svg = job.maskable ? maskable(source) : source
+    const svg = compose(drawing, job)
     // Die SVG steht in einer Seite ohne Rand, sonst schnitte der Screenshot
     // den Hintergrund an.
     const page = join(work, 'page.html')
@@ -75,7 +96,8 @@ ${svg}`)
       `--screenshot=${join(ROOT, job.to)}`,
       `file://${page}`,
     ])
-    console.log(`${job.to}  ${job.size}x${job.size}${job.maskable ? '  maskable' : ''}`)
+    const form = [job.bleed && 'randlos', job.inset && `Figur ${job.inset}`].filter(Boolean)
+    console.log(`${job.to}  ${job.size}x${job.size}${form.length ? '  ' + form.join(', ') : ''}`)
   }
 } finally {
   await rm(work, { recursive: true, force: true })

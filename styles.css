@@ -1606,7 +1606,9 @@ body.has-bar .footer { display: none; }
    den beiden Posen zieht der Container aus demselben Grund selbst, sie läuft
    so über die volle Breite. */
 .ex-figure[data-illu],
-.exercise-figure[data-illu] {
+.ex-figure[data-flip],
+.exercise-figure[data-illu],
+.exercise-figure[data-flip] {
   display: block;
   position: relative;
   overflow: hidden;
@@ -1638,6 +1640,37 @@ body.has-bar .footer { display: none; }
 
 .exercise-figure[data-illu] .ex-illu { height: auto; aspect-ratio: 358 / 426; }
 
+/* ------------------------------------------------- Daumenkino */
+/* Liegen im Übungsordner Einzelposen (pos-1.svg, pos-2.svg …), stehen sie
+   nebeneinander auf einem Streifen, der so breit ist wie alle zusammen. Er
+   rückt in Stufen um je ein Bild weiter und fängt am Ende wieder vorne an.
+   Die Stufen und die Dauer setzt lib/library.js, es weiss, wie viele es
+   sind; alles andere ist CSS, damit kein Zeitgeber weiterläuft, wenn der
+   Screen längst ein anderer ist.
+
+   Die Zeichnungen bringen keinen eigenen Rand mit, anders als die fertige
+   Illustration. Den gibt darum das Feld. */
+.ex-figure[data-flip] { padding: 18px; }
+.exercise-figure[data-flip] { padding: 12px; aspect-ratio: 330 / 197; }
+
+.ex-figure > .ex-flip,
+.exercise-figure > .ex-flip {
+  display: flex;
+  width: calc(100% * var(--frames, 1));
+  height: 100%;
+  animation-name: flip;
+  animation-iteration-count: infinite;
+}
+
+@keyframes flip { to { transform: translateX(-100%); } }
+
+.ex-frame {
+  flex: 0 0 auto;
+  width: calc(100% / var(--frames, 1));
+  height: 100%;
+  object-fit: contain;
+}
+
 /* ------------------------------------------------------- Vor dem Start */
 /* Derselbe Aufbau wie eine Übung, damit der Start kein Sprung ist: Kopf,
    Fläche, Bedienung unten. Die Übung legt ihre Leiste fest ans Fenster und
@@ -1663,8 +1696,9 @@ body.has-bar .footer { display: none; }
 .screen-ready .ex-figure[data-illu]::after { content: none; }
 
 /* ------------------------------------------------------------- Vorlieben */
-/* Eine Frage vor dem Start, zwei Antworten. Mehr Einstellungen hat die App
-   nicht, darum stehen sie offen da und nicht hinter einem Zahnrad. */
+/* Eine Frage vor dem Start: am Arbeitsplatz, oder nach eigenen Merkmalen.
+   Mehr Einstellungen hat die App nicht, darum stehen sie offen da und nicht
+   hinter einem Zahnrad. */
 .prefs { display: flex; flex-direction: column; gap: 6px; }
 
 .prefs:empty { display: none; }
@@ -1715,6 +1749,37 @@ body.has-bar .footer { display: none; }
 .chips:has(.chip:disabled) { opacity: 0.55; }
 
 .chip:disabled { cursor: default; }
+
+/* Die Merkmale unter "Andere". Jedes Merkmal eine Zeile mit eigener
+   Beschriftung: die Gruppen sind Mehrfachwahl, nicht eine Lage von zwei. */
+.prefs-facet { display: flex; flex-direction: column; gap: 4px; }
+
+.prefs-sub {
+  margin: 0;
+  font-size: calc(12px * var(--fs));
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Die Merkmale der laufenden Übung. Sie stehen nur da, darum ruhiger als die
+   Beta-Marke: Rahmen statt Akzentfläche. */
+.ex-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.ex-attrs:empty { display: none; }
+
+.ex-attrs .tag {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
 
 /* ------------------------------------------------------------------ Dosis */
 /* Dosis auf eigener Zeile über den Schritten. Beide Formen liegen weiss auf
@@ -1883,5 +1948,8 @@ body.has-bar .footer { display: none; }
 
   /* Ein Konfettiknall in 1 ms ist nur ein Zucken. Dann lieber gar keiner. */
   .party { display: none !important; }
+
+  /* Ein Daumenkino in 1 ms wäre ein Flackern. Dann lieber die erste Pose. */
+  .ex-flip { animation: none !important; }
 }
 

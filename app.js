@@ -7,7 +7,10 @@
 // mitmacht, gibt den Push beim nächsten Mal selber weiter.
 
 import { SLOTS, WEEK_GOAL } from './data/slots.js'
-import { EXERCISES, pickExercise, byId, uprightSlots } from './data/exercises.js'
+import {
+  EXERCISES, MODES, attrLabel, attrValues, attrsOf, byId, facets, filterFor,
+  pickExercise, slotsMatching,
+} from './data/exercises.js'
 import * as store from './lib/store.js'
 import * as share from './lib/share.js'
 import * as library from './lib/library.js'
@@ -412,7 +415,7 @@ function fillData(list, raw) {
     : 'keine'])
 
   rows.push(['Vorlieben', [
-    state.prefs.floor ? 'auch am Boden' : 'nur im Stehen',
+    prefsText(state.prefs),
     fontSizeOf(state.prefs).label.toLowerCase(),
     THEMES.find((t) => t.id === state.prefs.theme)?.label.toLowerCase() ?? 'system',
   ].join(', ')])
@@ -438,17 +441,17 @@ function fillData(list, raw) {
 /**
  * Die sechs Übungen einer Einheit, eine pro Slot. Wird beim Start
  * festgelegt und bleibt bis zum Ende gleich.
- * @param {{ floor?: boolean, from?: string[] }} [opts]  übernimmt ein
+ * @param {{ filter?: object, from?: string[] }} [opts]  übernimmt ein
  *   mitgeschicktes Set, soweit die Ids noch existieren.
  */
-function buildSet(state, { floor = true, from = [] } = {}) {
+function buildSet(state, { filter = {}, from = [] } = {}) {
   const given = new Map()
   for (const id of from) {
     const ex = byId(id)
     if (ex && !given.has(ex.slot)) given.set(ex.slot, ex.id)
   }
   return SLOTS.map((slot) =>
-    given.get(slot.id) ?? pickExercise(slot, state.sessionCount, { floor }).id)
+    given.get(slot.id) ?? pickExercise(slot, state.sessionCount, filter).id)
 }
 
 /** Übung für den aktuellen Slot, aus dem eingefrorenen Satz der Einheit. */
@@ -456,66 +459,141 @@ function exerciseAt(state, index) {
   const slot = SLOTS[index]
   const id = state.active?.set?.[index]
   return (id && byId(id))
-    ?? pickExercise(slot, state.sessionCount, { floor: state.active?.floor ?? true })
+    ?? pickExercise(slot, state.sessionCount, state.active?.filter ?? {})
 }
 
-/** Für wie viele Slots es eine Übung ohne Boden gibt. */
-function uprightCoverage() {
-  const have = uprightSlots()
+/** Für wie viele Slots der Filter eine Übung übrig lässt. */
+function coverage(filter) {
+  const have = slotsMatching(filter)
   return SLOTS.filter((s) => have.has(s.id)).length
 }
 
+/** Die Vorlieben in Worten, für die Datenliste in den Einstellungen. */
+function prefsText(prefs) {
+  const mode = MODES.find((m) => m.id === (prefs.mode ?? 'work'))
+  if (prefs.mode !== 'free') return mode.label.toLowerCase()
+  const chosen = facets()
+    .flatMap((f) => (prefs.filter?.[f.key] ?? f.values).map((v) => attrLabel(f.key, v)))
+    .map((t) => t.toLowerCase())
+  return `${mode.label.toLowerCase()} (${chosen.join(', ')})`
+}
+
+/** Eine Reihe Chips im gemeinsamen Rahmen. */
+function chipGroup(label, items, disabled, redraw) {
+  const row = document.createElement('div')
+  row.className = 'chips'
+  row.setAttribute('role', 'group')
+  row.setAttribute('aria-label', label)
+  for (const item of items) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'chip'
+    b.textContent = item.text
+    b.setAttribute('aria-pressed', String(item.on))
+    b.disabled = disabled
+    b.addEventListener('click', () => {
+      item.pick()
+      redraw()
+    })
+    row.append(b)
+  }
+  return row
+}
 
 /**
- * Kurze Abfrage vor dem Start: geht es heute auf den Boden oder nicht.
+ * Einen Merkmalswert dazu oder weg. Der letzte bleibt stehen: ein Merkmal ohne
+ * Wert hätte nichts zu wählen. Sind alle Werte gewählt, steht das Merkmal
+ * nicht im Filter; so gilt die Auswahl weiter, wenn der Pool einen Wert
+ * dazubekommt.
+ */
+function toggleAttr(key, value) {
+  const prefs = store.load().prefs
+  const all = attrValues(key)
+  const chosen = prefs.filter?.[key]
+  const on = Array.isArray(chosen) && chosen.length ? chosen : all
+  const next = on.includes(value) ? on.filter((v) => v !== value) : [...on, value]
+  if (!next.length) return
+  const filter = { ...(prefs.filter ?? {}) }
+  if (next.length >= all.length) delete filter[key]
+  else filter[key] = all.filter((v) => next.includes(v))
+  store.setPrefs({ filter })
+}
+
+/**
+ * Kurze Abfrage vor dem Start: am Arbeitsplatz, oder nach eigenen Merkmalen.
  * Steht auf beiden Einstiegen, Übersicht und Einladung.
+ *
+ * Am Arbeitsplatz heisst im Stehen und ohne Hilfsmittel und ist ein fester
+ * Filter. "Andere" legt die Merkmale des Pools offen; was dort gewählt wird,
+ * bleibt gespeichert und steht beim nächsten Mal wieder da.
  *
  * Eine laufende Einheit behält ihre Übungen. Sonst würde ein Umschalten
  * mitten im Lauf die schon erledigten Übungen austauschen.
  */
 function fillPrefs(el) {
   const state = store.load()
+  const prefs = state.prefs
+  const mode = prefs.mode ?? 'work'
   const running = (state.active?.done.length ?? 0) > 0
+  const redraw = () => fillPrefs(el)
   el.replaceChildren()
 
   const label = document.createElement('p')
   label.className = 'prefs-label'
   label.textContent = 'Heute trainiere ich 🚀'
 
-  const row = document.createElement('div')
-  row.className = 'chips'
-  row.setAttribute('role', 'group')
-  row.setAttribute('aria-label', 'Wo du trainierst')
+  el.append(label, chipGroup('Wie du trainierst', MODES.map((m) => ({
+    text: m.label,
+    on: mode === m.id,
+    pick: () => store.setPrefs({ mode: m.id }),
+  })), running, redraw))
 
-  const chip = (text, floor) => {
-    const b = document.createElement('button')
-    b.type = 'button'
-    b.className = 'chip'
-    b.textContent = text
-    b.setAttribute('aria-pressed', String(state.prefs.floor === floor))
-    b.disabled = running
-    b.addEventListener('click', () => {
-      store.setPrefs({ floor })
-      fillPrefs(el)
-    })
-    return b
+  // Nur "Andere" zeigt die Merkmale: am Arbeitsplatz stehen sie fest.
+  if (mode === 'free') {
+    for (const facet of facets()) {
+      const chosen = prefs.filter?.[facet.key]
+      const box = document.createElement('div')
+      box.className = 'prefs-facet'
+      const sub = document.createElement('p')
+      sub.className = 'prefs-sub'
+      sub.textContent = facet.label
+      box.append(sub, chipGroup(facet.label, facet.values.map((v) => ({
+        text: attrLabel(facet.key, v),
+        on: !Array.isArray(chosen) || chosen.length === 0 || chosen.includes(v),
+        pick: () => toggleAttr(facet.key, v),
+      })), running, redraw))
+      el.append(box)
+    }
   }
-  row.append(chip('Auch am Boden', true), chip('Nur im Stehen', false))
-  el.append(label, row)
 
   const note = document.createElement('p')
   note.className = 'note'
-  const covered = uprightCoverage()
+  const covered = coverage(filterFor(prefs))
   if (running) {
     note.textContent = 'Die angefangene Einheit behält ihre Übungen.'
-  } else if (!state.prefs.floor && covered === 0) {
-    note.textContent = 'Für keinen Bereich gibt es bisher eine Übung im Stehen. Die Einheit läuft am Boden.'
-  } else if (!state.prefs.floor && covered < SLOTS.length) {
-    note.textContent = `Für ${SLOTS.length - covered} von ${SLOTS.length} Bereichen gibt es noch keine Übung im Stehen. Dort bleibt es am Boden.`
+  } else if (covered === 0) {
+    note.textContent = 'Zu dieser Auswahl gibt es bisher keine Übung. Die Einheit nimmt, was da ist.'
+  } else if (covered < SLOTS.length) {
+    note.textContent = `Für ${SLOTS.length - covered} von ${SLOTS.length} Bereichen gibt es noch keine passende Übung. Dort kommt die nächstbeste.`
+  } else if (mode === 'work') {
+    note.textContent = 'Im Stehen, ohne Hilfsmittel.'
   } else {
     return
   }
   el.append(note)
+}
+
+/** Die Merkmale der Übung als Reihe kleiner Marken. */
+function fillAttrs(el, exercise) {
+  if (!el) return
+  el.replaceChildren()
+  for (const attr of attrsOf(exercise)) {
+    const tag = document.createElement('span')
+    tag.className = 'tag'
+    tag.dataset.attr = attr.key
+    tag.textContent = attr.label
+    el.append(tag)
+  }
 }
 
 // ------------------------------------------------------------------ Einladung
@@ -794,7 +872,11 @@ function showLibrary(back = showHome) {
 // ------------------------------------------------------------------ Übung
 
 function showExercise() {
-  const state = store.startSession({ set: buildSet(store.load(), { floor: store.load().prefs.floor }) })
+  const before = store.load()
+  const state = store.startSession({
+    filter: filterFor(before.prefs),
+    set: buildSet(before, { filter: filterFor(before.prefs) }),
+  })
   const slot = SLOTS[slotIndex]
   const exercise = exerciseAt(state, slotIndex)
   const view = screen('exercise')
@@ -803,6 +885,7 @@ function showExercise() {
   view.slots.slot.textContent = slot.label
   view.slots.name.textContent = exercise.name
   view.slots.cue.textContent = exercise.cue
+  fillAttrs(view.slots.attrs, exercise)
   view.slots.figure.replaceChildren(library.figureFor(exercise, 'ex-figure'))
 
   view.slots.progress.replaceChildren()
@@ -1285,9 +1368,10 @@ function showReady({ from = [] } = {}) {
 
 function startRun({ from = [] } = {}) {
   const before = store.load()
+  const filter = filterFor(before.prefs)
   const state = store.startSession({
-    floor: before.prefs.floor,
-    set: buildSet(before, { floor: before.prefs.floor, from }),
+    filter,
+    set: buildSet(before, { filter, from }),
   })
   const done = state.active?.done ?? []
   // Resume: beim ersten Slot weitermachen, der noch nicht erledigt ist.
@@ -1329,12 +1413,14 @@ function setupServiceWorker() {
   })
 
   // Die Bilder aller Übungen, nicht nur der heutigen: sonst stünde die
-  // nächste Einheit offline vor leeren Flächen. Erst wenn sonst nichts läuft.
+  // nächste Einheit offline vor leeren Flächen. Wo Einzelposen liegen, sind
+  // sie das, was gezeigt wird, also kommen sie statt der Illustration mit.
+  // Erst wenn sonst nichts läuft.
   const later = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 1500))
-  later(() => pwa.warm(
-    EXERCISES.filter((exercise) => exercise.illu)
-      .map((exercise) => `uebungen/${exercise.id}/illustration.svg`),
-  ))
+  later(() => pwa.warm(EXERCISES.flatMap((exercise) => {
+    if (exercise.frames) return library.frameUrls(exercise)
+    return exercise.illu ? [`uebungen/${exercise.id}/illustration.svg`] : []
+  })))
 }
 
 /**

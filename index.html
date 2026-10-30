@@ -113,7 +113,11 @@
           <button class="linkbtn" data-action="jump" data-to="faq">Fragen</button>
           <button class="linkbtn" data-action="jump" data-to="installblock">Installieren</button>
         </div>
-        <button class="btn btn-primary lp-navcta" data-action="start">App Starten</button>
+        <!-- Die Kopfzeile führt in die App und nicht in eine Einheit: wer
+             hier schon war, landet auf der Übersicht. Erst wer noch nichts
+             auf dem Gerät hat, fängt direkt an. Der Knopf im Hero bleibt der
+             Weg ins Training. -->
+        <button class="btn btn-primary lp-navcta" data-action="enter">App Starten</button>
       </nav>
     </div>
 
@@ -189,9 +193,11 @@
 
     <!-- Gleich nach dem Hero, bevor jemand mehr erwartet, als da ist: die
          App ist ein Versuch und sagt das selber. -->
-    <section class="lp-band lp-band-blue">
+    <section class="lp-band lp-band-soft">
       <div class="lp-inner">
-        <p class="eyebrow">Beta</p>
+        <!-- Dieselbe Marke wie an der Wortmarke: der Hinweis ist ein Stempel
+             auf der Seite und keine Überschrift des Abschnitts. -->
+        <p class="eyebrow"><span class="tag">Beta</span></p>
         <h2>Aktuell ist alles im Aufbau.</h2>
         <p class="lead">Die Idee steht. Alles andere ist noch experimentell und
           kann sich jeden Tag ändern. Die Übungen sind bisher Platzhalter und
@@ -442,10 +448,30 @@
        Abstand. Oben die Lage, dann der Start, unten die Daten. -->
   <section class="screen screen-home">
 
+    <!-- Dieselbe Kopfzeile wie die Erklärung: Marke, daneben die zwei
+         Nebenausgänge als Zahnrad und Fragezeichen. Dieselben zwei Zeichen
+         wie in der schwebenden Leiste, nur haben sie hier einen festen Platz
+         statt über dem Inhalt zu liegen; die Leiste bleibt darum weg. -->
+    <div class="lp-navbar">
+      <nav class="lp-nav">
+        <p class="eyebrow brand lp-brand">
+          <img class="lp-logo" src="assets/icon.svg" alt="" aria-hidden="true">
+          friendly push <span class="tag">beta</span>
+        </p>
+        <div class="lp-navbtns">
+          <button class="helpbtn" data-action="settings-top" title="Einstellungen"
+                  aria-label="Einstellungen">
+            <svg class="icon" aria-hidden="true"><use href="#i-gear"></use></svg>
+          </button>
+          <button class="helpbtn" data-action="help" title="So funktioniert friendly push"
+                  aria-label="So funktioniert friendly push">?</button>
+        </div>
+      </nav>
+    </div>
+
     <!-- Lage: wer du bist, wie die Woche steht, welche Geste offen ist. -->
     <div class="lp-band lp-band-hero">
       <div class="lp-inner">
-        <p class="eyebrow brand">friendly push <span class="tag">beta</span></p>
         <h1 data-slot="headline">Zehn Minuten für deinen Rücken</h1>
 
         <div class="intro" data-slot="intro" hidden>
@@ -658,7 +684,9 @@
 
     <!-- Konfetti sitzt in einer Zeile ohne Höhe, damit der Ausbruch nichts verschiebt. -->
     <div class="party" data-slot="party" hidden aria-hidden="true"></div>
-    <p class="status" data-slot="status" role="status"></p>
+    <!-- Die Meldung steht erst da, wenn sie etwas zu sagen hat. Leer hielte
+         sie nur eine Zeile frei, die niemand liest. -->
+    <p class="status" data-slot="status" role="status" hidden></p>
 
     <!-- Nach dem Push nur noch eine leise Zeile, kein zweiter Aufruf. -->
     <p class="sidequest" data-slot="sidequest" hidden>

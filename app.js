@@ -8,8 +8,8 @@
 
 import { SLOTS, WEEK_GOAL } from './data/slots.js'
 import {
-  EXERCISES, MODES, attrLabel, attrValues, attrsOf, byId, facets, filterFor,
-  pickExercise, slotsMatching,
+  EXERCISES, MODES, attrLabel, attrTint, attrValues, attrsOf, byId, facets,
+  filterFor, pickExercise, slotsMatching,
 } from './data/exercises.js'
 import * as store from './lib/store.js'
 import * as share from './lib/share.js'
@@ -237,12 +237,15 @@ function doseText(dose) {
   return dose.seconds >= 60 ? `${dose.seconds / 60} Minute` : `${dose.seconds} Sekunden`
 }
 
-/** Die Pushes der laufenden Woche. Am Montag fängt die Zählung von vorne an. */
-function pushCountText(n) {
+/**
+ * Die Zeile unter den Namen der Karte. Sie benennt, wer da steht, und zählt
+ * nicht: eine Wochenbilanz ist nicht der Punkt der Geste.
+ */
+function pushNoteText(n) {
   if (n === 0) return ''
   return n === 1
-    ? 'Du hast diese Woche eine Person motiviert.'
-    : `Du hast diese Woche ${n} Personen motiviert.`
+    ? 'Diese Person hast du zuletzt motiviert.'
+    : 'Diese Personen hast du zuletzt motiviert.'
 }
 
 /**
@@ -478,28 +481,6 @@ function prefsText(prefs) {
   return `${mode.label.toLowerCase()} (${chosen.join(', ')})`
 }
 
-/** Eine Reihe Chips im gemeinsamen Rahmen. */
-function chipGroup(label, items, disabled, redraw) {
-  const row = document.createElement('div')
-  row.className = 'chips'
-  row.setAttribute('role', 'group')
-  row.setAttribute('aria-label', label)
-  for (const item of items) {
-    const b = document.createElement('button')
-    b.type = 'button'
-    b.className = 'chip'
-    b.textContent = item.text
-    b.setAttribute('aria-pressed', String(item.on))
-    b.disabled = disabled
-    b.addEventListener('click', () => {
-      item.pick()
-      redraw()
-    })
-    row.append(b)
-  }
-  return row
-}
-
 /**
  * Einen Merkmalswert dazu oder weg. Der letzte bleibt stehen: ein Merkmal ohne
  * Wert hätte nichts zu wählen. Sind alle Werte gewählt, steht das Merkmal
@@ -535,35 +516,55 @@ function fillPrefs(el) {
   const prefs = state.prefs
   const mode = prefs.mode ?? 'work'
   const running = (state.active?.done.length ?? 0) > 0
-  const redraw = () => fillPrefs(el)
   el.replaceChildren()
 
   const label = document.createElement('p')
   label.className = 'prefs-label'
   label.textContent = 'Heute trainiere ich 🚀'
 
-  el.append(label, chipGroup('Wie du trainierst', MODES.map((m) => ({
-    text: m.label,
-    on: mode === m.id,
-    pick: () => store.setPrefs({ mode: m.id }),
-  })), running, redraw))
+  const chip = (into, text, on, pick, extra = '', tint = '') => {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = extra ? `chip ${extra}` : 'chip'
+    b.textContent = text
+    // Der Ton des Merkmals, derselbe wie an der Marke über der Übung.
+    if (tint) b.dataset.tint = tint
+    b.setAttribute('aria-pressed', String(on))
+    b.disabled = running
+    b.addEventListener('click', () => {
+      pick()
+      fillPrefs(el)
+    })
+    into.append(b)
+    return b
+  }
 
-  // Nur "Andere" zeigt die Merkmale: am Arbeitsplatz stehen sie fest.
+  const row = document.createElement('div')
+  row.className = 'chips'
+  row.setAttribute('role', 'group')
+  row.setAttribute('aria-label', 'Wie du trainierst')
+  for (const m of MODES) {
+    chip(row, m.label, mode === m.id, () => store.setPrefs({ mode: m.id }))
+  }
+  el.append(label, row)
+
+  // Nur "Andere" zeigt die Merkmale, als Wolke unter dem Toggle: jede Marke
+  // einzeln an- und abtippbar.
   if (mode === 'free') {
+    const cloud = document.createElement('div')
+    cloud.className = 'prefs-tags'
+    cloud.setAttribute('role', 'group')
+    cloud.setAttribute('aria-label', 'Merkmale der Übungen')
     for (const facet of facets()) {
       const chosen = prefs.filter?.[facet.key]
-      const box = document.createElement('div')
-      box.className = 'prefs-facet'
-      const sub = document.createElement('p')
-      sub.className = 'prefs-sub'
-      sub.textContent = facet.label
-      box.append(sub, chipGroup(facet.label, facet.values.map((v) => ({
-        text: attrLabel(facet.key, v),
-        on: !Array.isArray(chosen) || chosen.length === 0 || chosen.includes(v),
-        pick: () => toggleAttr(facet.key, v),
-      })), running, redraw))
-      el.append(box)
+      for (const value of facet.values) {
+        chip(cloud, attrLabel(facet.key, value),
+          !Array.isArray(chosen) || chosen.length === 0 || chosen.includes(value),
+          () => toggleAttr(facet.key, value),
+          'chip-tag', attrTint(facet.key, value))
+      }
     }
+    el.append(cloud)
   }
 
   const note = document.createElement('p')
@@ -591,6 +592,7 @@ function fillAttrs(el, exercise) {
     const tag = document.createElement('span')
     tag.className = 'tag'
     tag.dataset.attr = attr.key
+    if (attr.tint) tag.dataset.tint = attr.tint
     tag.textContent = attr.label
     el.append(tag)
   }
@@ -663,19 +665,22 @@ function showHome() {
   }
 
   // Die Karte zeigt die offene Geste: entweder schuldest du jemandem den Push
-  // zurück, oder deine bisherigen Pushes stehen da. Weggetippt bleibt sie
-  // weg, bis ein neuer Push rausgeht.
+  // zurück, oder die Personen deiner letzten Einheit stehen da. Weggetippt
+  // bleibt sie weg, bis ein neuer Push rausgeht.
   const pushes = store.pushesThisWeek(state)
   const from = state.pushedBy?.name
+  const aliases = store.lastPushAliases(state)
   if (from || pushes > store.pushCardSeen(state)) {
     view.slots.pushcard.hidden = false
+    // Gingen nach einer Einheit mehrere Pushes raus, steht jede Person als
+    // eigener Platz da, wie auf dem Abschluss-Screen beim Teilen.
     fillPair(view.slots.pushpair, from
       ? [{ name: from, done: true }, { name: myLabel(state), done: true, you: true }]
       : [{ name: myLabel(state), done: true, you: true },
-         { name: store.lastPushAlias(state), done: true }])
+         ...aliases.map((name) => ({ name, done: true }))])
     view.slots.pushnote.textContent = from
       ? `${from} hat dich gepusht. Beim nächsten Mal gibst du ${from} den friendly push.`
-      : pushCountText(pushes)
+      : pushNoteText(aliases.length)
   }
 
   if (state.active?.done.length) {
@@ -688,6 +693,10 @@ function showHome() {
 
   on(view.root, 'start', () => showReady())
   on(view.root, 'library', () => showLibrary())
+  // Die zwei Nebenausgänge stehen auf der Startseite in der Kopfzeile und
+  // nicht in der schwebenden Leiste, darum werden sie hier verdrahtet.
+  on(view.root, 'settings-top', () => showSettings(showHome))
+  on(view.root, 'help', () => showLanding(showHome))
   // Das Kreuz räumt die Karte weg: den offenen Push quittiert es, die eigene
   // Bilanz verschwindet bis zum nächsten Push.
   on(view.root, 'pushcard-hide', () => {
@@ -746,6 +755,10 @@ function showLanding(back = null) {
   }
 
   onAll(view.root, 'start', () => showReady())
+  // Liegt schon etwas auf dem Gerät, ist die Übersicht der Einstieg: dort
+  // steht die Lage und von dort geht es los. Ohne Daten gäbe es dort nichts
+  // zu sehen, dann fängt die Einheit sofort an.
+  on(view.root, 'enter', () => (store.hasData() ? showHome() : showReady()))
   onAll(view.root, 'library', () => showLibrary(() => showLanding(back)))
   mount(view, 'landing')
 }
@@ -1175,10 +1188,21 @@ function button(label, variant, handler) {
   return el
 }
 
+/**
+ * Die Meldung unter dem Teilen. Ohne Text steht sie nicht da: ein leerer
+ * Absatz hielte nur eine Zeile frei.
+ * @param {boolean} ok Erfolgsform statt Hinweisform
+ */
+function setStatus(el, text, ok = true) {
+  el.textContent = text
+  el.toggleAttribute('data-ok', Boolean(text) && ok)
+  el.hidden = !text
+}
+
 /** @returns {boolean} false, wenn der Name noch fehlt */
 function requireName(view) {
   if (store.load().name) return true
-  view.slots.status.textContent = 'Trag zuerst deinen Vornamen ein.'
+  setStatus(view.slots.status, 'Trag zuerst deinen Vornamen ein.', false)
   editName(view)
   shakeName(view)
   return false
@@ -1190,14 +1214,14 @@ function requireName(view) {
  *   zählt die Meldung mit, sonst stünde zweimal dasselbe da.
  */
 function report(statusEl, result, n = 1) {
-  statusEl.textContent = {
+  const text = {
     shared: n === 1
       ? 'Geschickt. Der Push ist unterwegs.'
       : `Geschickt. Jetzt sind ${n} Pushes unterwegs.`,
     copied: 'Link kopiert. Jetzt einfügen und abschicken.',
     failed: 'Hat nicht geklappt. Versuch es nochmal.',
   }[result]
-  statusEl.toggleAttribute('data-ok', result !== 'failed')
+  setStatus(statusEl, text ?? '', result !== 'failed')
 }
 
 /**

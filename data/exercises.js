@@ -264,6 +264,11 @@ export const EXERCISES = [
  * Welche Werte es gibt, sagt der Pool: eine neue Lage oder ein neues
  * Hilfsmittel in uebung.md steht ohne Codeänderung in der Auswahl. Fehlt eine
  * Beschriftung, steht der Wert selber da, statt dass die Zeile leer bleibt.
+ *
+ * `tints` gibt jedem Wert einen Ton aus der Markenpalette (--tint-* im
+ * Stylesheet). Er steht an jeder Stelle, an der das Merkmal auftaucht: an der
+ * Marke in der Auswahl und an der Marke über der Übung. So ist die Farbe die
+ * Eigenschaft und nicht die Dekoration. Fehlt ein Ton, bleibt die Marke grau.
  */
 export const ATTRS = [
   {
@@ -274,6 +279,11 @@ export const ATTRS = [
       standing: 'Im Stehen',
       seated: 'Im Sitzen',
     },
+    tints: {
+      floor: 'plum',
+      standing: 'blue',
+      seated: 'teal',
+    },
   },
   {
     key: 'equipment',
@@ -283,6 +293,12 @@ export const ATTRS = [
       band: 'Mit Band',
       wall: 'An der Wand',
       chair: 'Mit Stuhl',
+    },
+    tints: {
+      none: 'green',
+      band: 'brick',
+      wall: 'teal',
+      chair: 'plum',
     },
   },
 ]
@@ -296,12 +312,17 @@ export const WORK_FILTER = { position: ['standing'], equipment: ['none'] }
 /** Die zwei Arten, einen Filter zu bekommen. */
 export const MODES = [
   { id: 'work', label: 'Am Arbeitsplatz' },
-  { id: 'free', label: 'Andere' },
+  { id: 'free', label: 'Advanced' },
 ]
 
 /** Beschriftung eines Merkmalswerts. */
 export function attrLabel(key, value) {
   return ATTRS.find((a) => a.key === key)?.labels[value] ?? value
+}
+
+/** Ton eines Merkmalswerts, als Name aus der Palette. */
+export function attrTint(key, value) {
+  return ATTRS.find((a) => a.key === key)?.tints?.[value] ?? ''
 }
 
 /** Welche Werte eines Merkmals im Pool vorkommen, alphabetisch. */
@@ -320,7 +341,12 @@ export function facets() {
 export function attrsOf(exercise) {
   return ATTRS
     .filter((a) => exercise[a.key])
-    .map((a) => ({ key: a.key, value: exercise[a.key], label: attrLabel(a.key, exercise[a.key]) }))
+    .map((a) => ({
+      key: a.key,
+      value: exercise[a.key],
+      label: attrLabel(a.key, exercise[a.key]),
+      tint: attrTint(a.key, exercise[a.key]),
+    }))
 }
 
 /**

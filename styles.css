@@ -53,9 +53,11 @@
      ebenfalls fest, sie liegen auf dem Teal und nicht auf dem Hintergrund. */
   --card-ink: #fbf8f4;
 
-  /* Der Rahmen des Mockups auf der Landing: ein Gerät, also dunkel. Im
-     dunklen Modus heller als die Fläche, sonst verschwände er darin. */
-  --phone-frame: #15120f;
+  /* Der Rahmen des Mockups auf der Landing: ein helles Gehäuse, damit das
+     Gerät auf dem Papierton steht und nicht als schwarzer Block darauf. Im
+     dunklen Modus bleibt er dunkel, aber heller als die Fläche, sonst
+     verschwände er darin. */
+  --phone-frame: #c9c3c5;
 }
 
 /* Der dunkle Modus kommt entweder vom System oder aus den Einstellungen.
@@ -281,6 +283,19 @@ a.btn {
   outline-offset: 3px;
 }
 
+/* ----------------------------------------------------------- Merkmalstöne */
+/* Jedes Merkmal einer Übung trägt einen Ton aus der Markenpalette, und zwar
+   überall denselben: an der Marke in der Auswahl und an der Marke über der
+   Übung. Welcher Wert welchen Ton bekommt, steht bei den Merkmalen selbst
+   (ATTRS in data/exercises.js), hier steht nur die Übersetzung in die
+   Tokens. Im dunklen Modus zeigen die --tint-* von sich aus die
+   aufgehellten Fassungen, darum gilt der Block für beide Modi. */
+[data-tint='teal']  { --tint: var(--tint-teal); }
+[data-tint='brick'] { --tint: var(--tint-brick); }
+[data-tint='plum']  { --tint: var(--tint-plum); }
+[data-tint='green'] { --tint: var(--tint-green); }
+[data-tint='blue']  { --tint: var(--tint-blue); }
+
 /* ------------------------------------------------------------------ Hover */
 /* Nur wo ein Zeiger ist. Auf dem Handy bliebe ein :hover nach dem Tippen
    stehen, bis woanders hingetippt wird, und die App ist zuerst eine
@@ -293,6 +308,10 @@ a.btn {
 @media (hover: hover) and (pointer: fine) {
   .btn-primary:hover:not(:disabled),
   .chip[aria-pressed='true']:hover:not(:disabled) { filter: brightness(1.1); }
+
+  .chip-tag:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--tint, var(--line)) 55%, var(--line));
+  }
 
   .btn-soft:hover:not(:disabled) {
     background: color-mix(in oklab, var(--ink) 5%, var(--surface));
@@ -607,6 +626,28 @@ body.is-home #app { padding: 0; }
   gap: 16px;
 }
 
+/* Die Kopfzeile trägt dieselbe Form wie auf der Erklärung, nur in der
+   schmalen Spalte der App. Sie klebt nicht: die Startseite ist kurz, und auf
+   dem Handy brechen die zwei Knöpfe in eine zweite Zeile, die dann nicht
+   dauerhaft Platz wegnehmen soll. */
+.screen-home .lp-navbar { position: static; }
+
+.screen-home .lp-nav {
+  max-width: 460px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+/* Die Marke bricht nicht und schrumpft nicht: umbrechen sollen die Knöpfe.
+   Den Platz dahinter beansprucht sie nicht: der gehört den Knöpfen, die sich
+   damit an die rechte Kante schieben. */
+.screen-home .lp-brand { flex: 0 0 auto; margin-right: 0; white-space: nowrap; }
+
+/* Dieselben zwei Zeichen wie in der schwebenden Leiste, mit demselben
+   Abstand. Sie stehen rechts, auch wenn sie auf dem Handy in die zweite
+   Zeile brechen. */
+.lp-navbtns { display: flex; gap: 8px; margin-left: auto; }
+
 /* Oben hängt das erste Band an der Kopfzeile, unten endet die Seite ohne
    weitere Kante. */
 .screen-home .lp-band-hero .lp-inner { padding-top: 20px; }
@@ -620,13 +661,14 @@ body.is-home #app { padding: 0; }
   border-bottom: 1px solid color-mix(in srgb, var(--band) 34%, var(--line));
 }
 
-/* Das Startband trägt den Kern der App, darum nimmt es ein knappes Drittel
-   des Fensters und legt seinen Inhalt in die Mitte. */
+/* Das Startband trägt den Kern der App, darum hat es mehr Luft als die
+   anderen. Keine Mindesthöhe und keine Zentrierung: klappt die Auswahl auf,
+   soll das Band nach unten wachsen. Mit beidem bliebe es gleich hoch, der
+   Inhalt rückte in der Mitte zusammen, und es sähe aus, als schrumpfe die
+   Polsterung und hüpfe die Seite. */
 .screen-home .lp-band-green .lp-inner {
   padding: 34px 16px 36px;
   gap: 18px;
-  min-height: 30vh;
-  justify-content: center;
 }
 
 /* Zwei Kanten übereinander wären eine zu viel. */
@@ -863,6 +905,11 @@ body.is-landing #app { padding: 0; }
 
 .lp-band-hero .lp-inner { padding-top: 40px; gap: 24px; }
 
+/* Der Hero der Erklärung ist der erste Eindruck und trägt Text und Mockup
+   nebeneinander: er bekommt mehr Luft als die Bänder darunter. Die Regel
+   fasst nur ihn, die Startseite trägt im selben Band keine .lp-hero. */
+.lp-band-hero .lp-hero { padding-top: 12vh; padding-bottom: 12vh; }
+
 /* Der Text des Heros ist eine eigene Spalte, damit er neben dem Mockup als
    Block steht und nicht Zeile für Zeile auf dessen Höhe verteilt wird. */
 .lp-hero-text { display: flex; flex-direction: column; gap: 18px; }
@@ -890,7 +937,8 @@ body.is-landing #app { padding: 0; }
    Zeichnung, Leiste mit Fortschritt, Timer und Weiter. Nachgebaut und nicht
    abfotografiert, damit er mit den Farben und Formen der App mitläuft. Die
    Masse sind kleiner als in der App, darum eigene Klassen statt der echten.
-   Der Rahmen bleibt in beiden Modi dunkel: ein Gerät, kein Papier. */
+   Den Ton des Gehäuses trägt --phone-frame: hell auf dem Papierton, dunkel
+   im dunklen Modus. */
 /* Die Bühne für die zwei Geräte. Sie ist breiter als ein Gerät: das vordere
    steht rechts, das hintere links darunter, und beide überlappen. */
 .lp-phones {
@@ -1200,7 +1248,7 @@ body.is-landing #app { padding: 0; }
   .lp-phone { margin: 0 0 0 auto; }
 
   .lp-inner { padding: 64px 20px; }
-  .lp-band-hero .lp-inner { padding-top: 72px; }
+  .lp-band-hero .lp-inner { padding-top: 10vh; }
   .lp-inner > .lp-cta,
   .lp-side-text > .lp-cta { align-self: flex-start; }
 
@@ -1290,6 +1338,10 @@ body.is-landing #app { padding: 0; }
 .helpbtn .icon { font-size: calc(20px * var(--fs)); }
 
 body.has-help .topbtns { display: flex; }
+
+/* Auf der Startseite stehen dieselben zwei Wege als Textknöpfe in der
+   Kopfzeile. Zahnrad und Fragezeichen daneben wären dasselbe zweimal. */
+body.is-home .topbtns { display: none; }
 
 /* Die Meldung über die neue Fassung sitzt am selben Platz und ist wichtiger. */
 body.has-toast .topbtns { display: none; }
@@ -1703,7 +1755,21 @@ body.has-bar .footer { display: none; }
 
 .prefs:empty { display: none; }
 
-.prefs-label { margin: 0; font-size: calc(14px * var(--fs)); color: var(--ink-soft); }
+/* Dieselbe Form wie die Beschriftungen der Einstellungen: es ist eine Frage
+   und kein Fliesstext. */
+.prefs-label {
+  margin: 0;
+  font-size: calc(14px * var(--fs));
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* Wolke und Hinweis sind je ein eigener Abschnitt unter dem Toggle, nicht
+   seine Fortsetzung. Darum liegen beide oben und unten gleich weit weg: 18px
+   wie der Abstand der Bänder, abzüglich der 6px, die die Spalte selber
+   setzt. */
+.prefs > .prefs-tags,
+.prefs > .note { margin-top: 12px; }
 
 /* Eine Gruppe, nicht zwei Knöpfe: der gemeinsame Rahmen sagt, dass genau
    eine der beiden Lagen gilt und ein Tippen die andere wählt. */
@@ -1737,6 +1803,68 @@ body.has-bar .footer { display: none; }
   font-weight: 600;
 }
 
+/* Die Merkmale stehen unter dem Toggle als Wolke zum An- und Abtippen, ohne
+   gemeinsamen Rahmen und ohne Beschriftung: jede Marke steht für sich. Sie
+   sind kleiner als die zwei Lagen, weil sie zu ihnen gehören. */
+.prefs-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-self: stretch;
+}
+
+.chip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 6px 12px 6px 9px;
+  font-size: calc(13px * var(--fs));
+  border: 1px solid color-mix(in srgb, var(--tint, var(--line)) 30%, var(--line));
+  /* Abgewählt trägt die Marke keine eigene Fläche: sie liegt auf dem Band und
+     ist nur ein Umriss. Eine weisse Fläche sah aus wie ein Knopf, der schon
+     gedrückt ist. */
+  background: transparent;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+/* Das Kästchen sagt den Zustand, die Farbe sagt das Merkmal. Es steht als
+   Pseudo-Element da und nicht als echte Checkbox: der Knopf trägt den Zustand
+   schon in aria-pressed, ein zweites Bedienelement darin wäre eine Falle. */
+.chip-tag::before {
+  content: '✓';
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid color-mix(in srgb, var(--tint, var(--ink-soft)) 45%, var(--line));
+  border-radius: 5px;
+  font-size: calc(10px * var(--fs));
+  line-height: 1;
+  /* Leer, aber nicht weg: das Häkchen hält den Platz, den es gefüllt braucht,
+     sonst sprängen die Marken beim Antippen in der Breite. */
+  color: transparent;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+/* Abgewählt bleibt der Ton als Umriss stehen: die Farbe gehört dem Merkmal
+   und nicht dem Zustand. Gewählt füllt sie die Marke und das Kästchen. */
+.chip-tag[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--tint, var(--accent)) 40%, var(--line));
+  background: color-mix(in srgb, var(--tint, var(--accent)) 18%, var(--surface));
+  color: var(--tint, var(--accent-text));
+  font-weight: 600;
+}
+
+.chip-tag[aria-pressed='true']::before {
+  border-color: transparent;
+  background: var(--tint, var(--accent));
+  /* Der Haken trägt den Papierton: hell auf dem dunklen Hue, dunkel auf der
+     aufgehellten Fassung im dunklen Modus. */
+  color: var(--surface);
+}
+
 /* Auf schmalen Geräten liegt die Gruppe über die ganze Spalte, damit beide
    Lagen gleich gross zu treffen sind. Ab 450px nimmt sie nur ihre Breite. */
 @media (min-width: 450px) {
@@ -1746,22 +1874,10 @@ body.has-bar .footer { display: none; }
   }
 }
 
-.chips:has(.chip:disabled) { opacity: 0.55; }
+.chips:has(.chip:disabled),
+.prefs-tags:has(.chip:disabled) { opacity: 0.55; }
 
 .chip:disabled { cursor: default; }
-
-/* Die Merkmale unter "Andere". Jedes Merkmal eine Zeile mit eigener
-   Beschriftung: die Gruppen sind Mehrfachwahl, nicht eine Lage von zwei. */
-.prefs-facet { display: flex; flex-direction: column; gap: 4px; }
-
-.prefs-sub {
-  margin: 0;
-  font-size: calc(12px * var(--fs));
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
 
 /* Die Merkmale der laufenden Übung. Sie stehen nur da, darum ruhiger als die
    Beta-Marke: Rahmen statt Akzentfläche. */
@@ -1775,9 +1891,9 @@ body.has-bar .footer { display: none; }
 .ex-attrs:empty { display: none; }
 
 .ex-attrs .tag {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-soft);
+  border: 1px solid color-mix(in srgb, var(--tint, var(--line)) 35%, var(--line));
+  background: color-mix(in srgb, var(--tint, var(--accent)) 14%, var(--surface));
+  color: var(--tint, var(--accent-text));
   letter-spacing: 0.04em;
 }
 

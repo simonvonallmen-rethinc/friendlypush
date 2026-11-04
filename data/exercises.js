@@ -312,7 +312,18 @@ export const WORK_FILTER = { position: ['standing'], equipment: ['none'] }
 /** Die zwei Arten, einen Filter zu bekommen. */
 export const MODES = [
   { id: 'work', label: 'Am Arbeitsplatz' },
-  { id: 'free', label: 'Advanced' },
+  { id: 'free', label: 'Individuell' },
+]
+
+/**
+ * Hilfsmittel, zu denen es noch keine Übung gibt. Sie stehen abgeschaltet in
+ * der Auswahl: so sieht man, was dazukommt, statt es zu suchen und nicht zu
+ * finden. Sie gehen in keinen Filter ein.
+ */
+export const SOON = [
+  { key: 'equipment', value: 'kettlebell', label: 'Kettlebell', tint: 'brick' },
+  { key: 'equipment', value: 'loop', label: 'Loop Band', tint: 'teal' },
+  { key: 'equipment', value: 'dumbbells', label: 'Hantelset', tint: 'plum' },
 ]
 
 /** Beschriftung eines Merkmalswerts. */

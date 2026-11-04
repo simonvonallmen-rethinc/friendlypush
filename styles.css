@@ -1104,10 +1104,13 @@ body.is-landing #app { padding: 0; }
 /* -------------------------------------------------------- Karten */
 /* Die drei Punkte sind kleine Karten, die sich so breit legen, wie der
    Bildschirm hergibt. Jede trägt ein Icon und einen Satz und braucht darum
-   Breite: auf dem Handy stehen sie untereinander. */
+   Breite: auf dem Handy stehen sie untereinander. Untereinander brauchen sie
+   mehr Luft als nebeneinander, darum ist der Zeilenabstand grösser als der
+   Spaltenabstand. */
 .lp-facts {
   display: grid;
-  gap: 10px;
+  column-gap: 10px;
+  row-gap: 18px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
@@ -1164,37 +1167,32 @@ body.is-landing #app { padding: 0; }
 .lp-side-text > .eyebrow + h2 { margin-top: -8px; }
 
 /* Die Zeichnungen kommen aus Figma und stehen im Rahmen 238x238, in beiden
-   Modi gleich wie die Illustrationen der Übungen. Auf dem Handy nehmen sie
-   die halbe Spalte, nebeneinander ihr volles Mass. */
+   Modi gleich wie die Illustrationen der Übungen. Untereinander nehmen sie
+   60vw und behalten über height: auto ihr eigenes Verhältnis, nebeneinander
+   ihr volles Mass (siehe @media 720px). */
 .lp-side-icon {
   display: block;
   flex: 0 0 auto;
   align-self: flex-start;
-  width: min(238px, 46%);
+  width: 60vw;
   height: auto;
-  aspect-ratio: 1;
 }
 
 /* -------------------------------------------------------- Installieren */
-/* Der Weg auf den Homescreen steht als Karte im Band und nicht im Fliesstext:
-   er ist ein Handgriff und keine Erklärung. Die Karte trägt immer genau einen
-   davon, und wo der Browser ein Angebot macht, ist er nur ein Knopf. */
-.install-card {
+/* Der Weg auf den Homescreen ist keine Karte, sondern die nächste Zeile im
+   Text. Wo der Browser ein Angebot macht, steht dort nur der Knopf. Wo keins
+   kommt, stehen an derselben Stelle die Schritte, die dieses Gerät verlangt.
+   Diese Gruppe hält sie zusammen und trägt sonst nichts: keine Fläche, keine
+   Kante. */
+.install-way {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px;
-  background: var(--surface);
-  /* Dieselbe Kante wie die Karten weiter oben: auf einem getönten Band nimmt
-     sie dessen Ton auf, sonst schwämme sie in der Fläche. Ohne Ton bleibt die
-     gewöhnliche Linie übrig. */
-  border: 1px solid color-mix(in srgb, var(--band, var(--line)) 22%, var(--line));
-  border-radius: var(--radius);
 }
 
-.install-card-title { margin: 0; font-weight: 600; text-wrap: pretty; }
+.install-way-title { margin: 0; font-weight: 600; text-wrap: pretty; }
 
-.install-card-text { margin: 0; color: var(--ink-soft); text-wrap: pretty; }
+.install-way-text { margin: 0; color: var(--ink-soft); text-wrap: pretty; }
 
 /* -------------------------------------------------------- Fragen */
 /* Eine Liste statt Karten: Fragen werden gesucht, nicht gelesen. Offen ist
@@ -1384,7 +1382,13 @@ body.has-toast .topbtns { display: none; }
 /* ------------------------------------------------------------------ Ziel */
 /* Die Woche als sieben Tage, nicht als Bruchzahl: man soll sehen, wie viel
    Woche noch da ist, nicht nur wie viel Soll noch offen ist. */
-.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  /* Platz fuer den Punkt unter dem heutigen Feld. */
+  padding-bottom: 10px;
+}
 
 .day {
   display: flex;
@@ -1398,11 +1402,17 @@ body.has-toast .topbtns { display: none; }
   border: 1px solid var(--line);
 }
 
-.day i { font-style: normal; font-size: calc(11px * var(--fs)); font-weight: 600; color: var(--ink-soft); }
+.day i {
+  font-style: normal;
+  font-size: calc(11px * var(--fs));
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
 .day b { font-size: calc(14px * var(--fs)); line-height: 1; min-height: 14px; }
 
 .day[data-future] { background: none; border-style: dashed; opacity: 0.6; }
-.day[data-today] { border-color: var(--ink-soft); border-width: 2px; }
 
 .day[data-done] {
   background: var(--accent);
@@ -1410,6 +1420,29 @@ body.has-toast .topbtns { display: none; }
   color: var(--accent-ink);
 }
 .day[data-done] i { color: inherit; opacity: 0.75; }
+
+/* Heute bleibt eine Kachel wie die anderen sechs. Sie trägt nur eine feine
+   Kontur in der Akzentfarbe und darunter, ausserhalb der Kachel, einen
+   kleinen Punkt in derselben Farbe. Die Regel steht nach den erledigten
+   Tagen, damit sie auch dort gilt, wo die Fläche schon gefüllt ist. */
+.day[data-today] {
+  position: relative;
+  border-color: var(--accent);
+}
+
+/* Der Punkt sitzt mit Abstand unter der Kachel, nicht darin: er zeigt den
+   Tag an, ohne im Feld mit Haken oder Buchstabe zu konkurrieren. */
+.day[data-today]::after {
+  content: '';
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  translate: -50% 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 
 .weekline { margin: 0; font-size: calc(17px * var(--fs)); font-weight: 600; text-wrap: pretty; }
 
@@ -1909,10 +1942,35 @@ body.has-bar .footer { display: none; }
   }
 }
 
+/* Gedimmt wird die Gruppe nur, wenn die laufende Einheit sie sperrt. Die
+   Vorschau-Marken sind immer abgeschaltet und dürfen die Wolke darum nicht
+   dauerhaft blass machen. */
 .chips:has(.chip:disabled),
-.prefs-tags:has(.chip:disabled) { opacity: 0.55; }
+.prefs-tags:has(.chip:disabled:not([data-soon])) { opacity: 0.55; }
 
 .chip:disabled { cursor: default; }
+
+/* Was noch kommt: gestrichelter Umriss, kein Kästchen, ein kleines "bald".
+   Es ist kein abgewählter Wert, sondern ein Platz, der noch leer ist. */
+.chip-tag[data-soon] {
+  border-style: dashed;
+  color: var(--ink-soft);
+  opacity: 0.75;
+  padding-left: 12px;
+}
+
+.chip-tag[data-soon]::before { display: none; }
+
+.chip-tag[data-soon] small {
+  font-size: calc(10px * var(--fs));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tint, var(--ink-soft)) 14%, var(--surface));
+  color: var(--tint, var(--ink-soft));
+}
 
 /* Die Merkmale der laufenden Übung. Sie stehen nur da, darum ruhiger als die
    Beta-Marke: Rahmen statt Akzentfläche. */

@@ -297,13 +297,12 @@
             eigenes Zeichen, Vollbild, ohne Adressleiste, und auch ohne Netz.
             Kein Store, kein Konto, keine Berechtigung.</p>
 
-          <!-- Der Weg dorthin steht als Karte und nicht im Fliesstext: er ist
-               ein Handgriff und keine Erklärung, und er sieht auf jedem Gerät
-               anders aus. Die Karte trägt immer genau einen davon, app.js
-               wählt ihn. Am kürzesten ist er, wo der Browser von sich aus ein
-               Angebot macht: dann steht nur der Knopf da. -->
-          <div class="install-card">
-            <p class="install-card-title" data-slot="installcardtitle"></p>
+          <!-- Wo der Browser ein Angebot macht, führt ein Knopf auf den
+               Homescreen. Wo keins kommt, steht an derselben Stelle direkt die
+               Anleitung, die dieses Gerät verlangt. Sichtbar ist immer genau
+               eines von beiden, app.js wählt. -->
+          <div class="install-way" data-slot="installway" hidden>
+            <p class="install-way-title" data-slot="installwaytitle"></p>
 
             <!-- iOS: Safari macht kein Angebot, hier führt nur der Handgriff hin. -->
             <ol class="steps" data-slot="installios" hidden>
@@ -343,13 +342,13 @@
 
             <!-- Auf dem Rechner heisst der Eintrag überall anders und liegt
                  überall woanders: ein Satz statt dreier Schritte. -->
-            <p class="install-card-text" data-slot="installdesktop" hidden>Im
+            <p class="install-way-text" data-slot="installdesktop" hidden>Im
               Menü des Browsers steht «App installieren» oder «Zum
               Startbildschirm hinzufügen».</p>
+          </div>
 
-            <div class="lp-cta">
-              <button class="btn btn-primary" data-action="install" hidden>Jetzt installieren</button>
-            </div>
+          <div class="lp-cta">
+            <button class="btn btn-primary" data-action="install" hidden>Jetzt installieren</button>
           </div>
         </div>
       </div>

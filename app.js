@@ -8,7 +8,7 @@
 
 import { SLOTS, WEEK_GOAL } from './data/slots.js'
 import {
-  EXERCISES, MODES, attrLabel, attrTint, attrValues, attrsOf, byId, facets,
+  EXERCISES, MODES, SOON, attrLabel, attrTint, attrValues, attrsOf, byId, facets,
   filterFor, pickExercise, slotsMatching,
 } from './data/exercises.js'
 import * as store from './lib/store.js'
@@ -175,7 +175,9 @@ function icon(id) {
 }
 
 /**
- * Die laufende Woche als sieben Tage. Ein erledigter Tag trägt einen Haken.
+ * Die laufende Woche als sieben Tage. Ein erledigter Tag trägt einen Haken,
+ * der heutige eine kräftige Kontur: er ist der Tag, an dem etwas zu tun ist,
+ * und hebt sich über den Rahmen ab, nicht über eine zweite Beschriftung.
  */
 function fillWeek(el, days) {
   el.replaceChildren()
@@ -192,14 +194,18 @@ function fillWeek(el, days) {
     label.textContent = day.label
     const mark = document.createElement('b')
     mark.setAttribute('aria-hidden', 'true')
+    // Der heutige Tag braucht hier keine Markierung mehr: die Kontur und der
+    // Punkt unter der Kachel zeigen ihn an.
     mark.textContent = day.done ? '\u2713' : ''
     cell.append(label, mark)
     el.append(cell)
   }
   const done = days.filter((d) => d.done).length
   const pushes = days.filter((d) => d.push).length
+  const today = days.find((d) => d.today)
   el.setAttribute('aria-label',
-    `Diese Woche ${done} Einheiten${pushes ? `, davon ${pushes} mit Push` : ''}`)
+    `Diese Woche ${done} Einheiten${pushes ? `, davon ${pushes} mit Push` : ''}. `
+    + `Heute ${today?.done ? 'erledigt' : 'noch offen'}.`)
 }
 
 /**
@@ -505,7 +511,7 @@ function toggleAttr(key, value) {
  * Steht auf beiden Einstiegen, Übersicht und Einladung.
  *
  * Am Arbeitsplatz heisst im Stehen und ohne Hilfsmittel und ist ein fester
- * Filter. "Andere" legt die Merkmale des Pools offen; was dort gewählt wird,
+ * Filter. "Individuell" legt die Merkmale des Pools offen; was dort gewählt wird,
  * bleibt gespeichert und steht beim nächsten Mal wieder da.
  *
  * Eine laufende Einheit behält ihre Übungen. Sonst würde ein Umschalten
@@ -520,7 +526,11 @@ function fillPrefs(el) {
 
   const label = document.createElement('p')
   label.className = 'prefs-label'
-  label.textContent = 'Heute trainiere ich 🚀'
+  // Wer heute schon trainiert hat, fängt nicht den Tag an, sondern legt nach.
+  // Die Frage sagt das, sonst läse sie sich wie ein Fehler.
+  label.textContent = store.trainedToday(state)
+    ? 'Zusätzliches Training starten'
+    : 'Heute trainiere ich 🚀'
 
   const chip = (into, text, on, pick, extra = '', tint = '') => {
     const b = document.createElement('button')
@@ -548,7 +558,7 @@ function fillPrefs(el) {
   }
   el.append(label, row)
 
-  // Nur "Andere" zeigt die Merkmale, als Wolke unter dem Toggle: jede Marke
+  // Nur "Individuell" zeigt die Merkmale, als Wolke unter dem Toggle: jede Marke
   // einzeln an- und abtippbar.
   if (mode === 'free') {
     const cloud = document.createElement('div')
@@ -563,6 +573,24 @@ function fillPrefs(el) {
           () => toggleAttr(facet.key, value),
           'chip-tag', attrTint(facet.key, value))
       }
+    }
+    // Was noch kommt, steht am Ende der Wolke: sichtbar, aber nicht wählbar.
+    for (const soon of SOON) {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'chip chip-tag'
+      b.dataset.soon = ''
+      if (soon.tint) b.dataset.tint = soon.tint
+      b.disabled = true
+      b.setAttribute('aria-pressed', 'false')
+      b.setAttribute('aria-label', `${soon.label}, kommt noch`)
+      const name = document.createElement('span')
+      name.textContent = soon.label
+      const hint = document.createElement('small')
+      hint.setAttribute('aria-hidden', 'true')
+      hint.textContent = 'bald'
+      b.append(name, hint)
+      cloud.append(b)
     }
     el.append(cloud)
   }
@@ -832,9 +860,8 @@ function done() {
   return line
 }
 
-/** Die Überschrift der Karte, je nachdem, was auf diesem Gerät geht. */
+/** Die Überschrift über der Anleitung, je nachdem, was dieses Gerät verlangt. */
 const INSTALL_TITLES = {
-  offer: 'Ein Tippen, und sie liegt bei deinen Apps.',
   ios: 'So kommt sie auf den Home-Bildschirm:',
   android: 'So kommt sie auf den Startbildschirm:',
   desktop: 'So kommt sie zu deinen Apps:',
@@ -880,9 +907,10 @@ function fillInstall(view) {
 }
 
 /**
- * Die Karte trägt immer genau einen Weg: den Knopf, sobald der Browser ein
- * Angebot gemacht hat, sonst den Handgriff, den dieses Gerät verlangt. iOS
- * macht nie eines, dort bleiben es die drei Schritte im Teilen-Menü.
+ * An derselben Stelle steht immer genau ein Weg: der Knopf, sobald der Browser
+ * ein Angebot gemacht hat, sonst direkt die Anleitung, die dieses Gerät
+ * verlangt. iOS macht nie eines, dort bleiben es die drei Schritte im
+ * Teilen-Menü.
  *
  * @param {{ slots: Record<string, HTMLElement> }} view
  * @param {boolean} offered Liegt ein Angebot des Browsers vor?
@@ -893,7 +921,9 @@ function showInstallWay(view, offered = false) {
       : pwa.isAndroid() ? 'android'
         : 'desktop'
 
-  view.slots.installcardtitle.textContent = INSTALL_TITLES[way]
+  // Mit Angebot führt der Knopf hin, und die Anleitung tritt ganz zurück.
+  view.slots.installway.hidden = offered
+  view.slots.installwaytitle.textContent = INSTALL_TITLES[way] ?? ''
   view.slots.installios.hidden = way !== 'ios'
   view.slots.installandroid.hidden = way !== 'android'
   view.slots.installdesktop.hidden = way !== 'desktop'

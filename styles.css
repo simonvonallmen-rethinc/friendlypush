@@ -1386,8 +1386,8 @@ body.has-toast .topbtns { display: none; }
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
-  /* Platz fuer den Punkt unter dem heutigen Feld. */
-  padding-bottom: 10px;
+  /* Platz für den Punkt unter dem heutigen Feld. */
+  padding-bottom: 14px;
 }
 
 .day {
@@ -1435,11 +1435,11 @@ body.has-toast .topbtns { display: none; }
 .day[data-today]::after {
   content: '';
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   left: 50%;
   translate: -50% 0;
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--accent);
 }

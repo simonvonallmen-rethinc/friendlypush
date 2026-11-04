@@ -139,6 +139,20 @@ input, textarea, select { font-size: max(16px, 1em); }
   fill: currentColor;
 }
 
+/* Ein Symbol, das als Strich steht und nicht als Fläche: dieselbe Stärke wie
+   die gefüllten daneben, weil sie aus demselben 256er-Raster kommen. */
+.icon-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 16;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Ein Zeichen mitten im Satz steht auf der Grundlinie zu hoch: es ist 1em
+   hoch, die Schrift nicht. */
+.icon-inline { vertical-align: -0.18em; }
+
 html, body {
   margin: 0;
   min-height: 100%;

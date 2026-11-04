@@ -832,52 +832,35 @@ function done() {
   return line
 }
 
+/** Die Überschrift der Karte, je nachdem, was auf diesem Gerät geht. */
+const INSTALL_TITLES = {
+  offer: 'Ein Tippen, und sie liegt bei deinen Apps.',
+  ios: 'So kommt sie auf den Home-Bildschirm:',
+  android: 'So kommt sie auf den Startbildschirm:',
+  desktop: 'So kommt sie zu deinen Apps:',
+}
+
 /**
  * Der Installationsteil sagt, was auf diesem Gerät wirklich geht: Chrome und
  * Edge machen ein Angebot, das die Seite weiterreichen kann, iOS macht keins
  * und verlangt den Handgriff im Teilen-Menü.
- *
- * Auf dem Handy bleibt dieses Band beim Ergebnis, und das Band darunter
- * nimmt den Weg Schritt für Schritt: dort wird er gesucht, und dort ist er
- * je nach System ein anderer.
  */
 function fillInstall(view) {
   const block = view.slots.installblock
-  const mobile = view.slots.installmobile
+  const buttons = [...view.root.querySelectorAll('[data-action="install"]')]
 
   // Wer sie schon installiert hat, braucht die Anleitung nicht.
   if (pwa.isStandalone()) {
     block.hidden = true
-    mobile.hidden = true
     return
   }
 
-  const apple = pwa.isApple()
-  const phone = apple || pwa.isAndroid()
-
-  // Auf dem Handy trägt das Band darunter den Knopf. Zwei gleiche Knöpfe in
-  // zwei Bändern direkt übereinander wären einer zu viel, darum fällt der aus
-  // diesem Band dort weg. Der im Hero steht weit genug davon entfernt.
-  const buttons = [...view.root.querySelectorAll('[data-action="install"]')]
-    .filter((button) => !(phone && block.contains(button)))
-
-  const tail = ' Danach startet friendly push wie jede andere App: im Vollbild, ohne Adressleiste.'
-  view.slots.installhow.textContent = phone
-    ? 'Ein eigenes Zeichen auf dem Homescreen, Vollbild, auch ohne Netz. Kein Store, kein Konto, keine Berechtigung. Wie sie dorthin kommt, steht gleich darunter.'
-    : 'Im Menü des Browsers steht «App installieren» oder «Zum Startbildschirm hinzufügen».' + tail
-
-  if (phone) fillInstallMobile(view, apple)
+  showInstallWay(view)
 
   // Kommt das Angebot des Browsers, übernimmt der Knopf. Es kann vor oder
-  // nach diesem Screen eintreffen, darum beides. Nur ein Platz dafür: dieses
-  // Modul hält genau einen Horcher, darum steht hier auch, was das Angebot
-  // im Band darunter ändert.
+  // nach diesem Screen eintreffen, darum beides.
   pwa.whenInstallable(() => {
-    if (phone && !apple) offerAndroid(view, true)
-    else if (!phone) {
-      view.slots.installhow.textContent =
-        'Ein Tippen, dann liegt sie neben deinen anderen Apps.' + tail
-    }
+    showInstallWay(view, true)
     for (const button of buttons) button.hidden = false
   })
 
@@ -887,53 +870,33 @@ function fillInstall(view) {
       // Das Angebot ist nach einem Dialog verbraucht, egal wie er ausging.
       if (installed) {
         block.hidden = true
-        mobile.hidden = true
         return
       }
       for (const other of buttons) other.hidden = true
-      // Ohne Knopf bleibt der Weg über das Menü, also wieder die Schritte.
-      if (phone && !apple) offerAndroid(view, false)
+      // Ohne Knopf bleibt der Handgriff, den dieses Gerät verlangt.
+      showInstallWay(view)
     })
   }
 }
 
 /**
- * Der Weg auf den Homescreen, Schritt für Schritt. Er steht nur auf dem
- * Handy: auf dem Rechner heisst der Eintrag anders und wird nicht gesucht.
- *
- * iOS macht kein Angebot, dort bleiben es immer die drei Schritte im
- * Teilen-Menü. Android macht eines, aber nicht sofort: bis es eintrifft,
- * steht der Weg über das Menü des Browsers da, und `offerAndroid` tauscht
- * ihn gegen den Knopf, sobald er etwas tun kann.
- *
- * @param {{ slots: Record<string, HTMLElement> }} view
- * @param {boolean} apple
- */
-function fillInstallMobile(view, apple) {
-  view.slots.installmobile.hidden = false
-
-  if (apple) {
-    view.slots.installmobiletitle.textContent = 'Zum Home-Bildschirm, in drei Schritten.'
-    view.slots.installios.hidden = false
-    return
-  }
-
-  offerAndroid(view, false)
-}
-
-/**
- * Dasselbe Band, zwei Fassungen: mit dem Angebot des Browsers ist es ein
- * Knopf, ohne es sind es drei Schritte durch dessen Menü.
+ * Die Karte trägt immer genau einen Weg: den Knopf, sobald der Browser ein
+ * Angebot gemacht hat, sonst den Handgriff, den dieses Gerät verlangt. iOS
+ * macht nie eines, dort bleiben es die drei Schritte im Teilen-Menü.
  *
  * @param {{ slots: Record<string, HTMLElement> }} view
  * @param {boolean} offered Liegt ein Angebot des Browsers vor?
  */
-function offerAndroid(view, offered) {
-  view.slots.installmobiletitle.textContent = offered
-    ? 'Ein Tippen, dann liegt sie bei deinen Apps.'
-    : 'Zum Startbildschirm, in drei Schritten.'
-  view.slots.installmobilelead.hidden = !offered
-  view.slots.installandroid.hidden = offered
+function showInstallWay(view, offered = false) {
+  const way = offered ? 'offer'
+    : pwa.isApple() ? 'ios'
+      : pwa.isAndroid() ? 'android'
+        : 'desktop'
+
+  view.slots.installcardtitle.textContent = INSTALL_TITLES[way]
+  view.slots.installios.hidden = way !== 'ios'
+  view.slots.installandroid.hidden = way !== 'android'
+  view.slots.installdesktop.hidden = way !== 'desktop'
 }
 
 // ------------------------------------------------------------------ Übungen

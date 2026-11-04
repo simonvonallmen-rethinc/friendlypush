@@ -293,64 +293,64 @@
         <div class="lp-side-text">
           <p class="eyebrow">Installieren</p>
           <h2>Wie eine App, ohne App Store.</h2>
-          <p class="lead" data-slot="installhow"></p>
-          <div class="lp-cta">
-            <button class="btn btn-primary" data-action="install" hidden>Auf den Homescreen legen</button>
+          <p class="lead">Friendly push legt sich neben deine anderen Apps:
+            eigenes Zeichen, Vollbild, ohne Adressleiste, und auch ohne Netz.
+            Kein Store, kein Konto, keine Berechtigung.</p>
+
+          <!-- Der Weg dorthin steht als Karte und nicht im Fliesstext: er ist
+               ein Handgriff und keine Erklärung, und er sieht auf jedem Gerät
+               anders aus. Die Karte trägt immer genau einen davon, app.js
+               wählt ihn. Am kürzesten ist er, wo der Browser von sich aus ein
+               Angebot macht: dann steht nur der Knopf da. -->
+          <div class="install-card">
+            <p class="install-card-title" data-slot="installcardtitle"></p>
+
+            <!-- iOS: Safari macht kein Angebot, hier führt nur der Handgriff hin. -->
+            <ol class="steps" data-slot="installios" hidden>
+              <li><span>
+                <b>Teilen antippen.
+                  <svg class="icon icon-line icon-inline" aria-hidden="true"><use href="#i-share"></use></svg></b>
+                Das Zeichen steht in Safari unten in der Leiste, auf dem iPad
+                oben rechts.
+              </span></li>
+              <li><span>
+                <b>«Zum Home-Bildschirm» wählen.</b>
+                In der Liste ein Stück nach unten, zwischen den anderen
+                Einträgen.
+              </span></li>
+              <li><span>
+                <b>«Hinzufügen» bestätigen.</b>
+                Das Zeichen liegt danach bei deinen Apps.
+              </span></li>
+            </ol>
+
+            <!-- Android, solange kein Angebot des Browsers vorliegt. -->
+            <ol class="steps" data-slot="installandroid" hidden>
+              <li><span>
+                <b>Das Menü des Browsers öffnen.</b>
+                Die drei Punkte, in Chrome oben rechts.
+              </span></li>
+              <li><span>
+                <b>«App installieren» wählen.</b>
+                In manchen Browsern heisst der Eintrag «Zum Startbildschirm
+                hinzufügen».
+              </span></li>
+              <li><span>
+                <b>Bestätigen.</b>
+                Das Zeichen liegt danach bei deinen Apps.
+              </span></li>
+            </ol>
+
+            <!-- Auf dem Rechner heisst der Eintrag überall anders und liegt
+                 überall woanders: ein Satz statt dreier Schritte. -->
+            <p class="install-card-text" data-slot="installdesktop" hidden>Im
+              Menü des Browsers steht «App installieren» oder «Zum
+              Startbildschirm hinzufügen».</p>
+
+            <div class="lp-cta">
+              <button class="btn btn-primary" data-action="install" hidden>Jetzt installieren</button>
+            </div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Der Weg auf den Homescreen steht da, wo er gesucht wird: auf dem
-         Handy. Android macht ein Angebot, das sich abkürzen lässt, iOS macht
-         keins und verlangt den Handgriff im Teilen-Menü. Beide Fassungen
-         stehen hier, app.js zeigt die, die auf dieses Gerät passt, und auf
-         dem Rechner bleibt das Band weg. -->
-    <section class="lp-band lp-band-blue" data-slot="installmobile" hidden>
-      <div class="lp-inner">
-        <p class="eyebrow">Auf diesem Gerät</p>
-        <h2 data-slot="installmobiletitle"></h2>
-        <p class="lead" data-slot="installmobilelead" hidden>Der Browser macht
-          das Angebot selbst: ein Tippen, bestätigen, fertig.</p>
-
-        <!-- iOS: Safari macht kein Angebot, hier führt nur der Handgriff hin. -->
-        <ol class="steps" data-slot="installios" hidden>
-          <li><span>
-            <b>Teilen antippen.
-              <svg class="icon icon-line icon-inline" aria-hidden="true"><use href="#i-share"></use></svg></b>
-            Das Zeichen steht in Safari unten in der Leiste, auf dem iPad oben
-            rechts.
-          </span></li>
-          <li><span>
-            <b>«Zum Home-Bildschirm» wählen.</b>
-            In der Liste ein Stück nach unten, zwischen den anderen Einträgen.
-          </span></li>
-          <li><span>
-            <b>«Hinzufügen» bestätigen.</b>
-            Das Zeichen liegt danach bei deinen Apps.
-          </span></li>
-        </ol>
-
-        <!-- Android: bis das Angebot des Browsers eintrifft, der Weg über das
-             Menü. Kommt es, übernimmt der Knopf darunter. -->
-        <ol class="steps" data-slot="installandroid" hidden>
-          <li><span>
-            <b>Das Menü des Browsers öffnen.</b>
-            Die drei Punkte, in Chrome oben rechts.
-          </span></li>
-          <li><span>
-            <b>«App installieren» wählen.</b>
-            In manchen Browsern heisst der Eintrag «Zum Startbildschirm
-            hinzufügen».
-          </span></li>
-          <li><span>
-            <b>Bestätigen.</b>
-            Das Zeichen liegt danach bei deinen Apps.
-          </span></li>
-        </ol>
-
-        <div class="lp-cta">
-          <button class="btn btn-primary" data-action="install" hidden>Auf den Homescreen legen</button>
         </div>
       </div>
     </section>

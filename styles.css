@@ -1175,6 +1175,27 @@ body.is-landing #app { padding: 0; }
   aspect-ratio: 1;
 }
 
+/* -------------------------------------------------------- Installieren */
+/* Der Weg auf den Homescreen steht als Karte im Band und nicht im Fliesstext:
+   er ist ein Handgriff und keine Erklärung. Die Karte trägt immer genau einen
+   davon, und wo der Browser ein Angebot macht, ist er nur ein Knopf. */
+.install-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: var(--surface);
+  /* Dieselbe Kante wie die Karten weiter oben: auf einem getönten Band nimmt
+     sie dessen Ton auf, sonst schwämme sie in der Fläche. Ohne Ton bleibt die
+     gewöhnliche Linie übrig. */
+  border: 1px solid color-mix(in srgb, var(--band, var(--line)) 22%, var(--line));
+  border-radius: var(--radius);
+}
+
+.install-card-title { margin: 0; font-weight: 600; text-wrap: pretty; }
+
+.install-card-text { margin: 0; color: var(--ink-soft); text-wrap: pretty; }
+
 /* -------------------------------------------------------- Fragen */
 /* Eine Liste statt Karten: Fragen werden gesucht, nicht gelesen. Offen ist
    immer nur, was jemand aufgeklappt hat. */

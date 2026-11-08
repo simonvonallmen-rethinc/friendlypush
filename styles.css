@@ -199,7 +199,7 @@ h1 {
   text-wrap: balance;
 }
 
-/* Die Markenzeile trägt den Beta-Hinweis, darum als Zeile mit Lücke. */
+/* Die Markenzeile trägt den Alpha-Hinweis, darum als Zeile mit Lücke. */
 .brand { display: flex; align-items: center; gap: 8px; }
 
 .tag {
@@ -1973,7 +1973,7 @@ body.has-bar .footer { display: none; }
 }
 
 /* Die Merkmale der laufenden Übung. Sie stehen nur da, darum ruhiger als die
-   Beta-Marke: Rahmen statt Akzentfläche. */
+   Alpha-Marke: Rahmen statt Akzentfläche. */
 .ex-attrs {
   display: flex;
   flex-wrap: wrap;

@@ -18,7 +18,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 1,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'bws-sphinx',
@@ -29,7 +30,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 2,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'bws-stehende-katze',
@@ -40,7 +42,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 3,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
 
 
@@ -54,7 +57,7 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 1,
-    illu: true,
+    illu: false,
     frames: 2,
   },
   {
@@ -66,7 +69,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 2,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'pull-stehend-yt',
@@ -77,7 +81,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 3,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'pull-stehendes-rudern',
@@ -88,7 +93,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 4,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
 
 
@@ -102,7 +108,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 1,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'scapula-schub-vierfuessler',
@@ -113,7 +120,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 2,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'scapula-stehender-schub',
@@ -124,7 +132,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 3,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'scapula-wandengel',
@@ -135,7 +144,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 4,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
 
 
@@ -149,7 +159,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 1,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'hipflexor-kniestand-streckung',
@@ -160,7 +171,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 2,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'hipflexor-ausfallschritt',
@@ -171,7 +183,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 3,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
 
 
@@ -185,7 +198,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 1,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'core-dead-bug',
@@ -196,7 +210,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 2,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'glutes-stehende-hueftstreckung',
@@ -207,7 +222,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 3,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'glutes-beckenheben-stand',
@@ -218,7 +234,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 4,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
 
 
@@ -232,7 +249,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 1,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'finish-aufrechter-sitz',
@@ -243,7 +261,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'floor',
     difficulty: 2,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
   {
     id: 'finish-nicken-stehend',
@@ -254,7 +273,8 @@ export const EXERCISES = [
     equipment: 'none',
     position: 'standing',
     difficulty: 3,
-    illu: true,
+    illu: false,
+    frames: 2,
   },
 ]
 

@@ -220,21 +220,21 @@ function weekSentence(state) {
 
   if (progress.reached) {
     return today
-      ? 'Heute trainiert und das Wochenziel steht. Alles Weitere ist geschenkt.'
-      : 'Wochenziel steht. Alles Weitere ist geschenkt.'
+      ? 'Wochenziel erreicht 🎉 Jede weitere Einheit ist ein Bonus.'
+      : 'Wochenziel erreicht. Jede weitere Einheit ist ein Bonus.'
   }
   if (today) {
     return left === 1
-      ? 'Heute erledigt. Eine Einheit fehlt noch diese Woche.'
-      : `Heute erledigt. Noch ${left} Einheiten diese Woche.`
+      ? 'Noch eine Einheit bis zum Wochenziel.'
+      : `Noch ${left} Einheiten bis zum Wochenziel.`
   }
   if (left > days) {
-    return `Noch ${left} Einheiten, aber nur ${days === 1 ? 'heute' : `${days} Tage`}. Das wird knapp.`
+    return `Noch ${left} Einheiten bis zum Wochenziel, aber nur ${days === 1 ? 'noch heute' : `noch ${days} Tage`}. Das wird knapp.`
   }
-  const rest = days === 1 ? 'Heute ist der letzte Tag' : `Noch ${days} Tage Zeit`
+  const rest = days === 1 ? 'Heute ist der letzte Tag der Woche' : `Du hast noch ${days} Tage Zeit`
   return left === 1
-    ? `Eine Einheit fehlt diese Woche. ${rest}.`
-    : `${left} Einheiten fehlen diese Woche. ${rest}.`
+    ? `Noch eine Einheit bis zum Wochenziel. ${rest}.`
+    : `Noch ${left} Einheiten bis zum Wochenziel. ${rest}.`
 }
 
 
@@ -260,8 +260,8 @@ function pushNoteText(n) {
  */
 function weekMoreLine(state) {
   return store.weekProgress(state).reached
-    ? 'Je mehr, desto besser: jede weitere Einheit zählt obendrauf.'
-    : `${WEEK_GOAL} Einheiten sind das Ziel. Mehr ist besser.`
+    ? 'Je öfter, desto besser für deinen Rücken.'
+    : `Ziel: ${WEEK_GOAL} Einheiten pro Woche. Mehr ist immer gut.`
 }
 
 /** Mein Anzeigename, solange keiner gesetzt ist. */
@@ -529,7 +529,7 @@ function fillPrefs(el) {
   // Wer heute schon trainiert hat, fängt nicht den Tag an, sondern legt nach.
   // Die Frage sagt das, sonst läse sie sich wie ein Fehler.
   label.textContent = store.trainedToday(state)
-    ? 'Zusätzliches Training starten'
+    ? 'Lust auf mehr? Die nächste Einheit trainiere ich'
     : 'Heute trainiere ich 🚀'
 
   const chip = (into, text, on, pick, extra = '', tint = '') => {
@@ -683,13 +683,16 @@ function showHome() {
 
   const trained = store.trainedToday(state)
   if (!firstVisit) {
-    // Mit Namen wird die Person angesprochen statt informiert. Ohne Namen
-    // bleibt es bei der Ansage, ein «Hey Du» wäre schlechter als keines.
-    const line = trained ? 'heute schon trainiert' : 'zehn Minuten für deinen Rücken'
-    view.slots.headline.textContent = state.name
-      ? `Hey ${state.name}, ${line}`
-      : line.charAt(0).toUpperCase() + line.slice(1)
-    view.slots.startbtn.textContent = trained ? 'Nochmal trainieren' : 'Einheit starten'
+    // Die Zeile sagt in ganzen Sätzen, wo man steht: geschafft, oder Zeit
+    // für die Einheit. Mit Namen wird die Person angesprochen, ohne Namen
+    // bleibt es beim Satz, ein «Hey Du» wäre schlechter als keines.
+    const name = state.name
+    view.slots.headline.textContent = trained
+      ? (name ? `Super ${name}, du hast heute schon trainiert 🎉` : 'Super, du hast heute schon trainiert 🎉')
+      : (name ? `Hey ${name}, Zeit für 10 Minuten Rückentraining` : 'Zeit für 10 Minuten Rückentraining')
+    view.slots.startbtn.textContent = state.active?.done.length
+      ? 'Einheit fortsetzen'
+      : trained ? 'Noch eine Einheit starten' : 'Einheit starten'
   }
 
   // Die Karte zeigt die offene Geste: entweder schuldest du jemandem den Push
@@ -714,7 +717,7 @@ function showHome() {
   if (state.active?.done.length) {
     view.slots.resume.hidden = false
     view.slots.resume.textContent =
-      `Angefangene Einheit: ${state.active.done.length} von ${SLOTS.length} erledigt. Weiter geht es, wo du aufgehört hast.`
+      `Du hast ${state.active.done.length} von ${SLOTS.length} Übungen erledigt. Mach weiter, wo du aufgehört hast.`
   }
 
   fillPrefs(view.slots.prefs)

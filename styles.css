@@ -48,7 +48,7 @@
      der Karte und die Fläche der Zeichnung sind dieselbe Farbe, darum steht
      sie hier als Wert und nicht als Variable, die umschalten könnte. */
   --card-bg: #2f6f5e;
-
+f
   /* Die Figur in der Zeichnung und die Trennlinie zwischen den beiden Posen:
      ebenfalls fest, sie liegen auf dem Teal und nicht auf dem Hintergrund. */
   --card-ink: #fbf8f4;

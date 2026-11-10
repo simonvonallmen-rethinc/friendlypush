@@ -29,13 +29,16 @@
 <meta name="apple-mobile-web-app-title" content="friendly push">
 <meta name="mobile-web-app-capable" content="yes">
 
-<!-- Vorschau, wenn der Link in einem Chat landet. Relative Pfade, weil der
-     Host noch offen ist; nach dem Deploy gehören hier absolute hin. -->
+<!-- Vorschau, wenn der Link in einem Chat landet. Bildpfad absolut, sonst
+     holen die Crawler von WhatsApp, Slack und X das Bild nicht. Quelle: dev/og.html. -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://friendlypush.ch/">
 <meta property="og:title" content="friendly push">
 <meta property="og:description" content="Zehn Minuten gegen den Rundrücken. Dreimal die Woche, dann weitergeben.">
-<meta property="og:image" content="assets/icon-512.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://friendlypush.ch/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <body>
 
 <!-- Icons: Phosphor Regular, MIT, https://phosphoricons.com. Inline statt vom CDN,

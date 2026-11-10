@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- Quelle für assets/og.png, die Link-Vorschau. Nachgebaut aus dem Figma-Frame
+     "brand" (593 × 320), hochgerechnet auf 1200 × 630. Rastern:
+       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+         --hide-scrollbars --window-size=1200,630 --screenshot=assets/og.png dev/og.html
+     Liest Inter-Black.ttf aus ~/Library/Fonts/FontBase, sonst Pfad anpassen. -->
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'OG Inter'; font-weight: 900; src: url('file:///Users/simonvonallmen/Library/Fonts/FontBase/Inter-Black.ttf'); }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #fbf8f4; }
+  img { position: absolute; left: 132px; top: 138px; width: 354px; height: 354px; }
+  p {
+    position: absolute; left: 568px; top: 242px; margin: 0;
+    font: 900 100.4px/104.6px 'OG Inter', sans-serif; letter-spacing: 2px;
+    text-transform: uppercase; color: #2f6f5e; white-space: nowrap;
+    text-box: trim-both cap alphabetic;
+  }
+</style>
+<img src="../assets/icon.svg" alt="">
+<p>friendly<br>push.ch</p>

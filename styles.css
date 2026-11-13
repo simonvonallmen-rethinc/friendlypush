@@ -37,7 +37,7 @@
   --radius: 22px;
   --radius-lg: 32px;
 
-  /* Schriftgrösse als Faktor. Jede Grösse im Stylesheet rechnet damit, die
+      /* Schriftgrösse als Faktor. Jede Grösse im Stylesheet rechnet damit, die
      Einstellungen setzen ihn auf dem Wurzelelement um. */
   --fs: 1;
   --shadow: 0 2px 4px rgb(36 31 27 / 4%), 0 12px 28px rgb(36 31 27 / 7%);
@@ -2159,12 +2159,11 @@ body.has-bar .footer { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+  /* Das Daumenkino der Übung ist keine Zierde, sondern die Anleitung selbst.
+     Es läuft darum auch bei reduzierter Bewegung, nur alles andere wird still. */
+  *:not(.ex-flip) { transition-duration: 1ms !important; animation-duration: 1ms !important; }
 
   /* Ein Konfettiknall in 1 ms ist nur ein Zucken. Dann lieber gar keiner. */
   .party { display: none !important; }
-
-  /* Ein Daumenkino in 1 ms wäre ein Flackern. Dann lieber die erste Pose. */
-  .ex-flip { animation: none !important; }
 }
 

@@ -2,9 +2,9 @@
 // Ein Screen gleichzeitig, Templates aus index.html, kein Router und keine
 // History-API: der Hash gehört dem Share-Payload.
 //
-// Kern ist eine einseitige Geste: du trainierst, du motivierst eine Person,
-// fertig. Es kommt nichts zurück, nichts muss geschlossen werden. Wer
-// mitmacht, gibt den Push beim nächsten Mal selber weiter.
+// Kern ist eine Geste: du trainierst, du motivierst eine Person. Wer
+// mitmacht, gibt den Push zurück, und dieser Push ist zugleich die
+// Rückmeldung: High Five, und für heute ist Pause.
 
 import { SLOTS, WEEK_GOAL } from './data/slots.js'
 import {
@@ -15,6 +15,8 @@ import * as store from './lib/store.js'
 import * as share from './lib/share.js'
 import * as library from './lib/library.js'
 import * as pwa from './lib/pwa.js'
+import * as five from './data/high-five.js'
+import { RELEASES, LATEST, releaseEmoji } from './data/releases.js'
 
 const app = document.getElementById('app')
 
@@ -23,6 +25,8 @@ let incoming = null   // decodierter Payload des Links, mit dem wir geladen wurd
 let slotIndex = 0
 let timer = null
 let cueOpen = null    // Anleitung aufgeklappt; null heisst: noch nicht angetippt
+
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)')
 
 /** Ab dieser Fensterhöhe steht die Anleitung von sich aus offen. */
 const CUE_ROOM = 740
@@ -107,6 +111,17 @@ function fillPair(el, people) {
     if (!name) {
       name = document.createElement('span')
       name.textContent = person.name
+      // Die Maske fällt: zuerst steht der Deckname, dann kippt er auf den
+      // echten. Wer wenig Bewegung will, sieht gleich den echten.
+      if (person.reveal && !REDUCED_MOTION.matches) {
+        name.textContent = person.reveal
+        name.dataset.mask = ''
+        setTimeout(() => {
+          name.textContent = person.name
+          delete name.dataset.mask
+          name.dataset.revealed = ''
+        }, 1100)
+      }
     }
 
     peer.append(mark, name)
@@ -186,6 +201,7 @@ function fillWeek(el, days) {
     cell.className = 'day'
     if (day.done) cell.dataset.done = ''
     if (day.push) cell.dataset.push = ''
+    if (day.five) cell.dataset.five = ''
     if (day.today) cell.dataset.today = ''
     if (day.future) cell.dataset.future = ''
 
@@ -196,15 +212,18 @@ function fillWeek(el, days) {
     mark.setAttribute('aria-hidden', 'true')
     // Der heutige Tag braucht hier keine Markierung mehr: die Kontur und der
     // Punkt unter der Kachel zeigen ihn an.
-    mark.textContent = day.done ? '\u2713' : ''
+    // Ein Tag mit High Five trägt die Hände statt des Hakens.
+    mark.textContent = day.five ? '🙌' : day.done ? '\u2713' : ''
     cell.append(label, mark)
     el.append(cell)
   }
   const done = days.filter((d) => d.done).length
   const pushes = days.filter((d) => d.push).length
+  const fives = days.filter((d) => d.five).length
   const today = days.find((d) => d.today)
   el.setAttribute('aria-label',
-    `Diese Woche ${done} Einheiten${pushes ? `, davon ${pushes} mit Push` : ''}. `
+    `Diese Woche ${done} Einheiten${pushes ? `, davon ${pushes} mit Push` : ''}`
+    + `${fives ? `, ${fives} mit High Five` : ''}. `
     + `Heute ${today?.done ? 'erledigt' : 'noch offen'}.`)
 }
 
@@ -247,11 +266,32 @@ function doseText(dose) {
  * Die Zeile unter den Namen der Karte. Sie benennt, wer da steht, und zählt
  * nicht: eine Wochenbilanz ist nicht der Punkt der Geste.
  */
-function pushNoteText(n) {
-  if (n === 0) return ''
-  return n === 1
+/**
+ * Gezeigt wird, was zurückkam. Offene Pushes stehen mit ihrem Decknamen da,
+ * ohne den Hinweis, dass noch nichts kam: kein Druck.
+ */
+function pushNoteText(people, state) {
+  if (people.length === 0) return ''
+  const closed = people.filter((p) => p.closed).map((p) => p.name)
+  if (closed.length) {
+    const names = closed.length === 1
+      ? closed[0]
+      : `${closed.slice(0, -1).join(', ')} und ${closed.at(-1)}`
+    return `High Five mit ${names}! ${closed.length === 1 ? 'Hat' : 'Haben'} zurückgepusht.`
+  }
+  return people.length === 1
     ? 'Diese Person hast du zuletzt motiviert.'
     : 'Diese Personen hast du zuletzt motiviert.'
+}
+
+/** "4 High Fives zusammen. Ihr zusammen diese Woche: 4 von 6." Was davon zutrifft. */
+function loopLine(name, state) {
+  const parts = []
+  const count = five.fiveCount(store.rally(name, state))
+  if (count) parts.push(`${count}.`)
+  const duo = store.duoWeek(name, state)
+  if (duo) parts.push(`Ihr zusammen diese Woche: ${duo.done} von ${duo.goal}.`)
+  return parts.join(' ')
 }
 
 /**
@@ -376,8 +416,10 @@ function showSettings(back = showHome) {
   fillData(view.slots.data, view.slots.raw)
   // Nach dem Löschen zeichnet sich die Seite neu: dort steht, was es nicht
   // mehr gibt, und das Feld oben ist wieder leer.
+  fillBackup(view.slots.backup, () => showSettings(back))
   fillWipe(view.slots.wipe, () => showSettings(back))
 
+  on(view.root, 'news', () => openNews())
   on(view.root, 'back', back)
   mount(view, 'settings')
 }
@@ -417,6 +459,14 @@ function fillData(list, raw) {
 
   if (state.pushedBy?.name) {
     rows.push(['Offener Push', `an ${state.pushedBy.name}, seit ${dayText(state.pushedBy.day)}`])
+  }
+
+  const closed = store.closedThisWeek(state)
+  if (closed) rows.push(['Zurückgekommen', `${closed} diese Woche`])
+
+  const duos = Object.entries(state.duos ?? {}).filter(([, d]) => d.rally > 0)
+  if (duos.length) {
+    rows.push(['High Fives', duos.map(([name, d]) => `${name} ${d.rally}`).join(', ')])
   }
 
   rows.push(['Angefangene Einheit', state.active
@@ -629,17 +679,53 @@ function fillAttrs(el, exercise) {
 // ------------------------------------------------------------------ Einladung
 
 function showInvite() {
-  const state = store.load()
   const from = incoming.from
+  const reply = incoming.kind === 'reply'
+  // Eine Antwort wird beim Öffnen verbucht, nicht erst beim Training: sie
+  // meldet, was die andere Person schon getan hat. Ein zweites Öffnen zählt
+  // nicht nochmal, zeigt aber dasselbe.
+  const answer = reply ? store.receiveReply(incoming) : null
+  const state = store.load()
   const view = screen('invite')
 
-  view.slots.headline.textContent = `${from} hat heute trainiert`
+  const line = loopLine(from, state)
+  if (line) {
+    view.slots.loopline.hidden = false
+    view.slots.loopline.textContent = line
+  }
+
+  // Eine Antwort schliesst den Kreis: beide haben trainiert, High Five, und
+  // für heute ist Pause. Kein Start, nur der Weg zurück zur Übersicht.
+  if (reply) {
+    const seed = { day: store.isoDay(), name: from }
+    view.slots.headline.textContent = five.pick(five.CLOSED_HEADLINE, seed)
+    fillPair(view.slots.pair, [
+      { name: from, done: true, reveal: answer.alias },
+      { name: myLabel(state), done: true, you: true },
+    ])
+    view.slots.lead.textContent = five.pick(five.CLOSED_LEAD, seed)
+    for (const key of ['prefs', 'startbtn', 'startown', 'about', 'laterbtn']) view.slots[key].hidden = true
+    view.slots.homebtn.hidden = false
+    on(view.root, 'home', () => {
+      leaveLink()
+      showHome()
+    })
+    mount(view, 'invite')
+    if (answer.fresh) burst(view.slots.party)
+    return
+  }
+
+  view.slots.laterbtn.hidden = true
+  view.slots.headline.textContent = !incoming.date || incoming.date === store.isoDay()
+    ? `${from} hat heute trainiert`
+    : `${from} hat trainiert`
   fillPair(view.slots.pair, [
     { name: from, done: true },
     { name: myLabel(state), pending: true, you: true },
   ])
-  view.slots.lead.textContent =
-    `${from} gibt dir einen friendly push. Zehn Minuten, dann hast du es auch gemacht.`
+  view.slots.lead.textContent = incoming.rally > 0
+    ? `${from} hat vorgelegt. Zehn Minuten, dann habt ihr euer nächstes High Five.`
+    : `${from} gibt dir einen friendly push. Zehn Minuten, dann hast du es auch gemacht.`
 
   fillPrefs(view.slots.prefs)
 
@@ -651,12 +737,29 @@ function showInvite() {
   }
 
   const go = (from_) => () => {
-    store.setPushedBy(from)
+    acceptInvite(incoming)
     showReady({ from: from_ })
   }
   on(view.root, 'start', go(sameSet))
   on(view.root, 'start-own', go([]))
+  // Jetzt nicht: die Einladung wandert auf die Übersicht und wartet dort.
+  view.slots.laterbtn.hidden = false
+  on(view.root, 'later', () => {
+    store.setPendingInvite(incoming)
+    leaveLink()
+    showHome()
+  })
   mount(view, 'invite')
+}
+
+/** Die Einladung annehmen: ab jetzt gilt der Push dieser Person, die Antwort geht an sie. */
+function acceptInvite(invite) {
+  store.setPushedBy(invite.from, store.isoDay(), {
+    id: invite.id,
+    rally: invite.rally,
+    week: invite.week,
+  })
+  store.clearPendingInvite()
 }
 
 // ------------------------------------------------------------------ Startseite
@@ -698,20 +801,31 @@ function showHome() {
   // Die Karte zeigt die offene Geste: entweder schuldest du jemandem den Push
   // zurück, oder die Personen deiner letzten Einheit stehen da. Weggetippt
   // bleibt sie weg, bis ein neuer Push rausgeht.
-  const pushes = store.pushesThisWeek(state)
   const from = state.pushedBy?.name
-  const aliases = store.lastPushAliases(state)
-  if (from || pushes > store.pushCardSeen(state)) {
+  const people = store.lastPushPeople(state)
+  const pending = state.pendingInvite
+  const team = firstVisit ? null : store.team(state)
+  if (pending) fillChallenge(view, state, pending)
+  // Kommt die offene Einladung vom Team, sagt ihre Karte schon alles.
+  if (team && team.name !== pending?.from) fillTeam(view, state, team, trained)
+  // Was die Team-Karte schon sagt, sagt die Push-Karte nicht nochmal.
+  const sameAsTeam = team && (from
+    ? from === team.name
+    : people.length > 0 && people.every((p) => p.name === team.name))
+  if (!sameAsTeam && (from || store.pushCardCount(state) > store.pushCardSeen(state))) {
     view.slots.pushcard.hidden = false
     // Gingen nach einer Einheit mehrere Pushes raus, steht jede Person als
-    // eigener Platz da, wie auf dem Abschluss-Screen beim Teilen.
+    // eigener Platz da, wie auf dem Abschluss-Screen beim Teilen. Wer
+    // zurückgepusht hat, steht mit echtem Namen da.
     fillPair(view.slots.pushpair, from
-      ? [{ name: from, done: true }, { name: myLabel(state), done: true, you: true }]
+      ? [{ name: from, done: true }, { name: myLabel(state), pending: true, you: true }]
       : [{ name: myLabel(state), done: true, you: true },
-         ...aliases.map((name) => ({ name, done: true }))])
+         ...people.map((p) => ({ name: p.name, done: true }))])
     view.slots.pushnote.textContent = from
-      ? `${from} hat dich gepusht. Beim nächsten Mal gibst du ${from} den friendly push.`
-      : pushNoteText(aliases.length)
+      ? (state.pushedBy.rally > 0
+        ? `${from} hat zurückgepusht. Nach deiner nächsten Einheit bist du wieder dran.`
+        : `${from} hat dich gepusht. Nach deiner nächsten Einheit gibst du den Push zurück.`)
+      : pushNoteText(people, state)
   }
 
   if (state.active?.done.length) {
@@ -722,7 +836,33 @@ function showHome() {
 
   fillPrefs(view.slots.prefs)
 
-  on(view.root, 'start', () => showReady())
+  // Wer mit offener Einladung über den normalen Knopf trainiert, nimmt sie
+  // damit an: sonst ginge die Antwort an niemanden.
+  on(view.root, 'start', () => {
+    if (pending) acceptInvite(pending)
+    showReady()
+  })
+  // Neu: wer zum ersten Mal da ist, für den ist alles neu, also nichts davon.
+  if (firstVisit && LATEST && state.seenRelease !== LATEST) store.markReleaseSeen(LATEST)
+  const unseen = !firstVisit && LATEST && state.seenRelease !== LATEST
+  if (unseen) {
+    view.slots.newscard.hidden = false
+    view.slots.newsemoji.textContent = releaseEmoji(RELEASES[0])
+    view.slots.newstitle.textContent = `Neu: ${RELEASES[0].title}`
+    const n = RELEASES[0].items.length
+    view.slots.newssub.textContent = `${n} ${n === 1 ? 'Neuerung' : 'Neuerungen'}. Antippen und staunen.`
+  }
+  // "Gelesen" räumt Overlay und Karte weg, ohne die Seite neu zu zeichnen.
+  const read = () => {
+    view.slots.newscard.dataset.leaving = ''
+    setTimeout(() => { view.slots.newscard.hidden = true }, 260)
+  }
+  on(view.root, 'news-open', () => openNews(read))
+
+  on(view.root, 'challenge', () => {
+    incoming = pending
+    showInvite()
+  })
   on(view.root, 'library', () => showLibrary())
   // Die zwei Nebenausgänge stehen auf der Startseite in der Kopfzeile und
   // nicht in der schwebenden Leiste, darum werden sie hier verdrahtet.
@@ -736,6 +876,101 @@ function showHome() {
     showHome()
   })
   mount(view, 'home')
+}
+
+/** Die Neuerungen als Liste, neueste zuerst. App und Erklärung teilen sie. */
+function fillReleases(el) {
+  el.replaceChildren()
+  for (const release of RELEASES) {
+    const block = document.createElement('article')
+    block.className = 'release'
+    const head = document.createElement('h3')
+    head.textContent = `${releaseEmoji(release)} ${release.title}`
+    const date = document.createElement('p')
+    date.className = 'release-date'
+    date.textContent = dayText(release.id)
+    const list = document.createElement('ul')
+    for (const [emoji, text] of release.items) {
+      const li = document.createElement('li')
+      const mark = document.createElement('span')
+      mark.setAttribute('aria-hidden', 'true')
+      mark.textContent = emoji
+      const body = document.createElement('span')
+      body.textContent = text
+      li.append(mark, body)
+      list.append(li)
+    }
+    block.append(head, date, list)
+    el.append(block)
+  }
+}
+
+/**
+ * "Was ist neu" als Overlay. Erst "Gelesen" zählt als gelesen; wer es
+ * daneben oder mit Escape schliesst, findet die Karte weiter auf der Startseite.
+ * @param {() => void} onRead was nach "Gelesen" auf dem Screen verschwinden soll
+ */
+function openNews(onRead) {
+  const dlg = document.querySelector('[data-slot="news"]')
+  fillReleases(dlg.querySelector('[data-slot="newslist"]'))
+  const readBtn = dlg.querySelector('[data-action="news-read"]')
+  readBtn.onclick = () => {
+    if (LATEST) store.markReleaseSeen(LATEST)
+    dlg.close()
+    onRead?.()
+  }
+  dlg.onclick = (event) => { if (event.target === dlg) dlg.close() }
+  dlg.showModal()
+  dlg.scrollTop = 0
+  readBtn.focus({ preventScroll: true })
+}
+
+/** Die offene Einladung auf der Startseite: wer gepusht hat, und der Weg zurück auf den Link-Screen. */
+function fillChallenge(view, state, invite) {
+  const { from } = invite
+  view.slots.challenge.hidden = false
+  view.slots.challengecount.textContent = invite.rally > 0
+    ? five.fiveCount(invite.rally)
+    : 'Friendly push'
+  if (!(invite.rally > 0)) view.slots.challengecount.dataset.plain = ''
+  fillPair(view.slots.challengepair, [
+    { name: from, done: true },
+    { name: myLabel(state), pending: true, you: true },
+  ])
+  view.slots.challengenote.textContent = invite.rally > 0
+    ? `${from} hat vorgelegt und wartet auf dich. Zehn Minuten, dann habt ihr euer nächstes High Five.`
+    : `Friendly push von ${from}. Zehn Minuten, dann hast du es auch gemacht.`
+}
+
+/**
+ * Das Team auf der Startseite: das Gegenüber, mit dem zuletzt ein High Five
+ * zustande kam, der Zähler und was jetzt dran ist. Heute geschafft heisst
+ * Pause bis morgen. Ab dem nächsten Tag wird die Karte lauter, und je länger
+ * es her ist, desto deutlicher sagt sie es.
+ */
+function fillTeam(view, state, team, trained) {
+  const { name, since } = team
+  const seed = { day: store.isoDay(), name, n: since }
+  const lastPush = state.pushes.at(-1)
+  const pushedBy = state.pushedBy?.name === name
+  // Heute schon vorgelegt: der Push ging heute an genau dieses Gegenüber.
+  const waiting = since > 0 && trained && lastPush?.day === store.isoDay() && lastPush?.alias === name
+  const due = since > 0 && !trained
+
+  const card = view.slots.teamcard
+  card.hidden = false
+  if (due) card.dataset.due = ''
+  view.slots.teamcount.textContent = five.fiveCount(team.fives)
+  fillPair(view.slots.teampair, [
+    { name: myLabel(state), done: since === 0 || trained, you: true },
+    { name, done: since === 0, pending: since > 0 },
+  ])
+  view.slots.teamnote.textContent =
+    since === 0 ? five.pick(five.HOME_TODAY, seed)
+    : pushedBy ? `${name} hat vorgelegt. Zehn Minuten, dann habt ihr euer nächstes High Five.`
+    : waiting ? five.pick(five.HOME_WAITING, seed)
+    : since === 1 ? five.pick(five.HOME_DUE, seed)
+    : five.pick(five.HOME_LATE, seed)
 }
 
 // ------------------------------------------------------------------ Landing
@@ -759,6 +994,8 @@ function showLanding(back = null) {
 
   fillInstall(view)
   fillWipe(view.slots.wipe)
+  fillReleases(view.slots.releaselist)
+  if (!RELEASES.length) view.slots.releases.hidden = true
 
   // Der Weg zurück hängt am Zeichen der Kopfzeile, nicht an einem eigenen
   // Pfeil. Gibt es kein Zurück, bleibt das Zeichen eine Zeile Text: ein
@@ -808,6 +1045,113 @@ function showLanding(back = null) {
  *   Einstellungen zeichnen sich neu, weil dort steht, was es nicht mehr gibt.
  *   Die Erklärung bleibt stehen, dort ändert sich nichts.
  */
+/** Gerade ein Backup eingespielt. Überlebt genau eine Neuzeichnung der Einstellungen. */
+let restored = false
+
+/**
+ * Backup herunterladen und wieder einspielen. Herunterladen ist harmlos und
+ * geht sofort; Einspielen ersetzt alles auf dem Gerät und fragt darum
+ * nach, wie das Löschen.
+ */
+function fillBackup(el, after) {
+  el.replaceChildren()
+  const row = document.createElement('div')
+  row.className = 'backup-row'
+
+  const down = document.createElement('button')
+  down.className = 'btn btn-soft btn-small'
+  down.textContent = 'Backup herunterladen'
+  down.addEventListener('click', downloadBackup)
+
+  const file = document.createElement('input')
+  file.type = 'file'
+  file.accept = 'application/json,.json'
+  file.hidden = true
+  file.addEventListener('change', async () => {
+    const picked = file.files?.[0]
+    if (!picked) return
+    let parsed = null
+    try {
+      parsed = JSON.parse(await picked.text())
+    } catch { /* bleibt null */ }
+    askRestore(el, after, parsed, picked.name)
+  })
+
+  const up = document.createElement('button')
+  up.className = 'linkbtn'
+  up.textContent = 'Backup einspielen'
+  up.addEventListener('click', () => file.click())
+
+  row.append(down, up, file)
+  el.append(row)
+
+  if (restored) {
+    restored = false
+    const ok = document.createElement('p')
+    ok.className = 'note'
+    ok.setAttribute('role', 'status')
+    ok.textContent = 'Backup eingespielt. Alles wieder da.'
+    el.append(ok)
+  }
+}
+
+/** Die Datei entsteht im Browser und geht direkt in die Downloads, nirgendwo sonst hin. */
+function downloadBackup() {
+  const blob = new Blob([JSON.stringify(store.exportBackup(), null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `friendlypush-backup-${store.isoDay()}.json`
+  document.body.append(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+}
+
+function askRestore(el, after, parsed, name) {
+  el.replaceChildren()
+  const data = parsed?.app === 'friendlypush' ? parsed.data : parsed
+  const valid = data && typeof data === 'object' && Array.isArray(data.history)
+
+  const note = document.createElement('p')
+  note.className = 'note'
+  if (!valid) {
+    note.textContent = `«${name}» ist kein friendly-push-Backup.`
+    const back = document.createElement('button')
+    back.className = 'linkbtn'
+    back.textContent = 'Zurück'
+    back.addEventListener('click', () => fillBackup(el, after))
+    el.append(note, back)
+    return
+  }
+  const when = parsed?.exported ? ` vom ${dayText(parsed.exported.slice(0, 10))}` : ''
+  note.textContent = `Backup${when}: ${data.history.length} Einheiten${data.name ? `, ${data.name}` : ''}. `
+    + 'Es ersetzt alles, was jetzt auf diesem Gerät liegt.'
+
+  const yes = document.createElement('button')
+  yes.className = 'btn btn-soft btn-small'
+  yes.textContent = 'Ja, einspielen'
+  yes.addEventListener('click', () => {
+    const state = store.importBackup(parsed)
+    if (!state) {
+      note.textContent = 'Das hat nicht geklappt. Der Speicher ist voll oder gesperrt.'
+      return
+    }
+    applyLook(state.prefs)
+    restored = true
+    after()
+  })
+
+  const no = document.createElement('button')
+  no.className = 'linkbtn'
+  no.textContent = 'Abbrechen'
+  no.addEventListener('click', () => fillBackup(el, after))
+
+  const row = document.createElement('div')
+  row.className = 'wipe-row'
+  row.append(yes, no)
+  el.append(note, row)
+}
+
 function fillWipe(el, after = null) {
   el.replaceChildren()
   if (wiped) {
@@ -1029,16 +1373,15 @@ function showDone() {
     view.slots.cheer.hidden = false
   }
 
-  // Wer selbst gepusht wurde, hat jetzt zwei Dinge offen: der Person Bescheid
-  // geben und ihr beim nächsten Mal den Push zurückgeben.
-  const pushedBy = state.pushedBy
-  if (pushedBy?.name && reason !== 'few') {
-    const owed = pushedBy.day !== store.isoDay()
-    view.slots.pushback.hidden = false
-    view.slots.pushback.textContent = owed
-      ? `${pushedBy.name} hat dich damals gepusht. Heute wär ein guter Moment, den Push zurückzugeben.`
-      : `Sag ${pushedBy.name} Bescheid, dass du die Übungen gemacht hast. Und beim nächsten Mal gibst du ${pushedBy.name} den friendly push.`
-  }
+  // Wer selbst gepusht wurde, gibt den Push zurück. Das ist zugleich die
+  // Rückmeldung, ein zweiter Schritt dafür braucht es nicht. Eine Einheit,
+  // die nicht zählt, meldet nichts zurück.
+  view.backTo = state.pushedBy?.name && reason !== 'few' ? state.pushedBy : null
+  // Kein offener Push, aber ein Team, dessen letztes High Five nicht von
+  // heute ist: dann stösst der Hauptknopf das nächste an. Am Tag des High
+  // Five ist Pause, dann bleibt es beim gewohnten Knopf.
+  const team = store.team(state)
+  view.nextWith = !view.backTo && team && team.since > 0 && reason !== 'few' ? team : null
 
   fillWeek(view.slots.week, store.weekDays(state))
   view.slots.weekline.textContent = weekSentence(state)
@@ -1075,7 +1418,7 @@ function showDone() {
 
 /**
  * Der eine Schritt, auf den der Abschluss-Screen zuläuft: eine Person
- * motivieren. Mehr ist es nicht, es kommt nichts zurück.
+ * motivieren, oder der Person, die mich gepusht hat, den Push zurückgeben.
  */
 function renderPushStep(view) {
   view.slots.share.replaceChildren()
@@ -1084,10 +1427,15 @@ function renderPushStep(view) {
   // Leute sehen und nicht zweimal dieselbe Meldung.
   view.sent = []
   renderPair(view)
-  view.slots.sharehow.textContent =
-    'Jetzt gibst du den Push weiter. Ein Link an eine Person, das war es.'
+  const back = view.backTo?.name
+  const next = view.nextWith?.name
+  view.slots.sharehow.textContent = back
+    ? `Gib ${back} den Push zurück. ${back} sieht dann, dass du mitgemacht hast, und ihr habt euer High Five.`
+    : next ? five.fill(five.NEXT_ROUND, { name: next })
+    : 'Jetzt gibst du den Push weiter. Ein Link an eine Person, das war es.'
 
-  view.push = button('Eine Person motivieren', 'btn-primary', async () => {
+  const label = back ? `${back} zurückpushen` : next ? `${next} pushen` : 'Eine Person motivieren'
+  view.push = button(label, 'btn-primary', async () => {
     const result = await sendInvite(view)
     if (result) showPushSent(view, result)
   })
@@ -1114,7 +1462,7 @@ function renderPair(view) {
   const sent = view.sent ?? []
   fillPair(view.slots.pair, sent.length
     ? [me, ...sent.map((name) => ({ name, done: true }))]
-    : [me, { name: 'wer macht mit?', pending: true }])
+    : [me, { name: view.backTo?.name ?? view.nextWith?.name ?? 'wer macht mit?', pending: true }])
 }
 
 /**
@@ -1143,16 +1491,27 @@ function showPushSent(view, result) {
 
   view.slots.share.replaceChildren()
   renderPair(view)
-  view.slots.sharehow.textContent = shared
+  const replied = n === 1 ? view.replied : null
+  const nexted = n === 1 ? view.nexted : null
+  if (replied) {
+    const seed = { day: store.isoDay(), name: replied }
+    view.slots.headline.textContent = five.pick(five.CLOSED_HEADLINE, seed)
+    view.slots.eyebrow.textContent = 'High Five'
+  }
+  view.slots.sharehow.textContent = replied
+    ? `${five.pick(five.CLOSED_SENT, { day: store.isoDay(), name: replied })} ${loopLine(replied, state)}`.trim()
+      + (shared ? '' : ' Der Link liegt in der Zwischenablage, noch abschicken.')
+    : nexted
+    ? (shared
+      ? `Dein Push ist bei ${nexted}. Jetzt ist ${nexted} dran.`
+      : `Der Link liegt in der Zwischenablage. Abschicken, dann ist ${nexted} dran.`)
+    : shared
     ? (n === 1
       ? 'Der Push ist raus. Mehr braucht es nicht.'
       : `${n} Pushes sind raus. Je mehr, desto besser.`)
     : (n === 1
       ? 'Der Link liegt in der Zwischenablage. Abschicken, dann ist der Push raus.'
       : `Der Link liegt in der Zwischenablage. Abschicken, dann sind es ${n}.`)
-
-  // Push zurückgegeben: der Hinweis dazu hat sich erledigt.
-  if (!state.pushedBy) view.slots.pushback.hidden = true
 
   burst(view.slots.party)
   revealSidequest(view, n === 1 ? 'Noch jemand im Kopf?' : 'Es geht noch jemand.')
@@ -1283,7 +1642,12 @@ function report(statusEl, result, n = 1) {
     copied: 'Link kopiert. Jetzt einfügen und abschicken.',
     failed: 'Hat nicht geklappt. Versuch es nochmal.',
   }[result]
-  setStatus(statusEl, text ?? '', result !== 'failed')
+  // Ein Link von localhost geht nur auf diesem Gerät auf. Das passiert nur
+  // in der Entwicklung, dann soll es aber nicht still scheitern.
+  const local = result !== 'failed' && share.isLoopback()
+  setStatus(statusEl, local
+    ? `${text} Achtung: Der Link zeigt auf ${location.host} und geht nur auf diesem Gerät auf. Für andere Geräte die App über die WLAN-Adresse öffnen.`
+    : text ?? '', result !== 'failed')
 }
 
 /**
@@ -1294,17 +1658,40 @@ async function sendInvite(view, { extra = false } = {}) {
   const statusEl = view.slots.status
   if (!requireName(view)) return null
   const state = store.load()
-  const result = await share.share(
-    { from: state.name, date: store.isoDay(), set: state.lastSet },
-    `${state.name} hat gerade 10 Minuten für den Rücken gemacht. Machst du mit?`)
+  const id = store.newId()
+  const base = { from: state.name, date: store.isoDay(), set: state.lastSet, id, week: store.weekBits(state) }
+  // Der Hauptknopf gibt den Push zurück, wenn es jemanden gibt, dem er gilt.
+  // Die Sidequest lädt immer jemand Neues ein.
+  const back = extra ? null : view.backTo
+  const next = extra ? null : view.nextWith
+  // Das Menü geht an dem Knopf auf, der gedrückt wurde.
+  const anchor = extra ? view.root.querySelector('[data-action="side"]') : view.push
+  const rally = back ? (back.rally ?? 0) + 1 : next ? next.fives : 0
+  const result = back
+    ? await share.share(
+      { ...base, kind: 'reply', answers: back.id, rally },
+      `${state.name} hat auch 10 Minuten für den Rücken gemacht. High Five, ${back.name}! 🙌`, anchor)
+    : next
+    ? await share.share({ ...base, rally },
+      `${state.name} hat heute vorgelegt. Bereit für euer nächstes High Five, ${next.name}?`, anchor)
+    : await share.share(base,
+      `${state.name} hat gerade 10 Minuten für den Rücken gemacht. Machst du mit?`, anchor)
   report(statusEl, result, (view.sent?.length ?? 0) + 1)
   if (result === 'failed') return null
 
-  store.addPush()
-  // Der Push beim nächsten Mal galt der Person, die mich gepusht hat: damit
-  // ist die Geste erwidert. Am selben Tag zählt sie noch nicht, da ging der
-  // Link an jemand anderen.
-  if (!extra && state.pushedBy && state.pushedBy.day !== store.isoDay()) store.clearPushedBy()
+  if (back) {
+    store.addPush({ id, alias: back.name })
+    store.closeFive(back.name, rally)
+    store.clearPushedBy()
+    view.replied = back.name
+    view.backTo = null
+  } else if (next) {
+    store.addPush({ id, alias: next.name })
+    view.nexted = next.name
+    view.nextWith = null
+  } else {
+    store.addPush({ id })
+  }
   return result
 }
 
@@ -1536,11 +1923,21 @@ function setupTopButtons() {
 
 function init() {
   store.abortIfStale()
+  store.tidy()
   // Vor dem ersten Screen: sonst stünde er kurz in der falschen Grösse oder
   // im falschen Modus da.
   applyLook()
   setupServiceWorker()
   setupTopButtons()
+  // Ein Link, der im schon offenen Tab aufgeht, ändert nur den Hash: die
+  // Seite lädt nicht neu. Darum auch auf den Wechsel hören, nicht nur auf den Start.
+  window.addEventListener('hashchange', () => {
+    const next = share.decode()
+    if (!next) return
+    stopTimer()
+    incoming = next
+    showInvite()
+  })
   incoming = share.decode()
   if (incoming) showInvite()
   else if (isNewcomer()) showLanding()

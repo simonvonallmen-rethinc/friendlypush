@@ -230,3 +230,69 @@ Eine neue Fassung übernimmt nicht von selbst. Sie wartet, und die Seite zeigt o
 ## Iteration 2
 
 18 weitere Varianten: `band`, `towel`, `standing`-Abdeckung aller Slots. Reine Datenarbeit in `data/exercises.js`.
+
+## Iteration 3: Den Loop schliessen
+
+Stand: 2026-11-14. Hebt "Rückweg gestrichen" auf, aber nicht dessen Grund. Der alte Rückweg verlangte von B einen zweiten Schritt, der nur dem Zählwerk von A diente. Der neue ist derselbe eine Schritt wie bisher: B gibt den Push zurück, und dieser Push ist zugleich die Rückmeldung.
+
+### Entscheide
+
+| Thema | Entscheid |
+|---|---|
+| Rückweg | Antwort = Push zurück. Ein Knopf bei B, ein Link, zwei Bedeutungen: "hab's gemacht" und "jetzt du" |
+| Zeitpunkt | sofort nach der Einheit, auch am selben Tag. Der Unterschied "Bescheid geben" vs. "beim nächsten Mal zurückpushen" fällt weg |
+| Maske fällt | der Deckname eines Pushes wird beim Rücklauf durch den echten Namen ersetzt |
+| High Five | jede Rückgabe zählt eins hoch, pro Gegenüber gemerkt |
+| Gemeinsame Woche | jeder Link trägt die Trainingstage des Senders, Anzeige "Ihr zusammen: 5 von 6" |
+| Offen bis | Sonntag. Ein offener Push verfällt mit der Woche, still |
+| Sichtbarkeit | nur Erfolge. Offene Pushes zeigt die App nicht, kein Druck |
+| Daten | weiterhin nur Link-Hash und localStorage, kein Backend |
+
+### Payload
+
+```
+#p=<base64url>
+  { k: 'invite', f, d, s, i, w }          A -> B
+  { k: 'reply',  f, d, s, i, a, r, w }    B -> A, und danach hin und her
+```
+
+- `i` eigene Kennung des Links, 6 Zeichen base36, zufällig beim Versand
+- `a` Kennung des Links, auf den geantwortet wird
+- `r` High Five, die Antwort trägt den Stand des empfangenen Links plus eins
+- `w` `"<weekKey>:<bits>"`, sieben Bit Montag bis Sonntag, die eigenen Trainingstage der laufenden Woche
+
+Alte Links ohne `i` bleiben gültig. Eine Antwort darauf hat kein `a` und deckt darum nichts auf, zählt aber als Rückmeldung.
+
+### Ablauf
+
+1. **A trainiert und pusht.** `pushes` bekommt `{ day, session, alias, id }`. Der Deckname steht im Paar wie heute.
+2. **B öffnet den Invite.** `pushedBy` hält `{ name, day, id, rally, week }`.
+3. **B trainiert.** Der Hauptknopf heisst "Anna zurückpushen" und schickt `reply` mit `a = pushedBy.id`. Danach ist `pushedBy` erledigt, die Sidequest "Noch jemand?" schickt wie bisher einen `invite`.
+4. **A öffnet die Antwort.** Eigener Kopf über dem Einladungs-Screen: "Ben hat mitgemacht", der Deckname kippt auf "Ben" (Maske fällt), Konfetti, High Five und gemeinsame Woche. Darunter wie gewohnt der Start in die eigene Einheit. Ab hier ist Ben `pushedBy` von A, und das Spiel läuft weiter.
+
+### Zustand
+
+- `pushes[].id`, `pushes[].closedBy` (Name, sobald die Antwort da ist)
+- `duos: { [name]: { rally, week, seen: [id] } }`. Der Name ist der Schlüssel: lokal reicht das, eine Kennung pro Person bräuchte einen Server. `week` ist der zuletzt empfangene Wochenstand, gezeigt nur in derselben Woche. `seen` verhindert, dass ein zweimal geöffneter Link zweimal zählt
+- Aufräumen beim Laden: offene Pushes aus vergangenen Wochen verlieren `id` und `alias`, `duos[].week` aus vergangenen Wochen fällt weg
+
+### Anzeige
+
+- Startseite, Push-Karte: nur zurückgekommene Pushes. "Ben hat zurückgepusht. High Five 4."
+- Kalender: ein Tag mit Rückmeldung bekommt zusätzlich zum Stern eine eigene Marke (offen, ob nötig)
+- Abschluss bei B: der Satz "Sag Anna Bescheid ..." entfällt, der Knopf sagt es
+
+### Offene Punkte
+
+- Wie heisst der Knopf, wenn B von mehreren gepusht wurde? Vorschlag: nur die letzte Person, wie heute `pushedBy`
+- Gleichnamige Gegenüber teilen sich einen High Five. Akzeptiert
+
+### High Five und Pause (Nachtrag 2026-11-14)
+
+- **Name.** Der geschlossene Kreis heisst High Five: beide haben trainiert, man klatscht ab. Der Zähler zählt High Fives, nicht Hin und Her.
+- **Eine Antwort schliesst, ein Invite öffnet.** Die Antwort zählt +1, der Invite trägt nur den Stand (`r` reist jetzt in beiden Richtungen). So zählt jede Runde einmal.
+- **Pause für den Tag.** Wer die Antwort öffnet, sieht keinen Start mehr, sondern "High Five! Ihr habt es beide gemacht" mit Konfetti und den Weg zur Übersicht. Bei B wechselt der Abschluss nach dem Zurückpushen auf dieselbe Freude.
+- **Team-Karte auf der Startseite.** Gegenüber mit dem jüngsten High Five, Zähler, und ein Satz zur Lage: heute geschafft (ruhig), seit gestern (laut, Akzentfarbe), seit mehreren Tagen (laut, mit Anzahl Tage), heute vorgelegt (ruhig). Die Push-Karte schweigt, wenn sie dasselbe sagen würde.
+- **Nächste Runde.** Am Tag nach einem High Five heisst der Hauptknopf auf dem Abschluss "Ben pushen" und schickt einen Invite mit dem Zählerstand.
+- **Kalender.** Ein Tag mit High Five trägt 🙌 statt Haken.
+- **Texte.** Alle Sätze stehen in `data/high-five.js`, pro Lage eine Liste, pro Tag fest gezogen.

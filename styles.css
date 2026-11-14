@@ -87,6 +87,10 @@ f
     --tint-blue: var(--hue-blue-lift);
     --shadow: 0 2px 4px rgb(0 0 0 / 25%), 0 12px 28px rgb(0 0 0 / 35%);
     --phone-frame: #39312b;
+    /* Startband: das aufgehellte Grün in die warme Fläche gemischt ergibt
+       Oliv, das gelb wirkt. Darum hier eigene, kühlere Grüntöne. */
+    --start-bg: #1d2a21;
+    --start-line: #2f4636;
   }
 }
 
@@ -110,6 +114,8 @@ f
   --tint-blue: var(--hue-blue-lift);
   --shadow: 0 2px 4px rgb(0 0 0 / 25%), 0 12px 28px rgb(0 0 0 / 35%);
   --phone-frame: #39312b;
+  --start-bg: #1d2a21;
+  --start-line: #2f4636;
 }
 
 /* Formularfelder, Scrollbalken und Auswahlfarben sollen dem gewählten Modus
@@ -425,6 +431,16 @@ a.btn {
 /* Das Feld im eigenen Platz des Paares. Keine zweite Form, nur eine Linie
    unter dem Text: der Platz ist schon die Form, die Linie sagt, dass hier
    etwas einzutragen ist. */
+/* Die Maske fällt: der Deckname steht gedämpft da und kippt dann auf den
+   echten Namen. Bei reduzierter Bewegung setzt app.js gleich den echten. */
+.peer [data-mask] { opacity: 0.55; text-decoration: line-through; }
+.peer [data-revealed] { display: inline-block; animation: peer-reveal 420ms cubic-bezier(0.2, 0.8, 0.3, 1.2); }
+
+@keyframes peer-reveal {
+  0% { opacity: 0; transform: rotateX(90deg); }
+  100% { opacity: 1; transform: none; }
+}
+
 .peer-input {
   width: 9ch;
   min-width: 0;
@@ -520,15 +536,144 @@ a.btn {
   font-size: calc(16px * var(--fs));
 }
 
-/* Der Hinweis an die Person, die dich gepusht hat. Er steht in der
-   Accent-Farbe, weil er die einzige Verbindung nach aussen ist. */
-.pushback {
-  margin: 0;
-  padding: 14px 16px;
+/* Team-Karte: das High Five und was jetzt dran ist. Ruhig, solange heute
+   alles erledigt ist; ab dem Tag danach in der Akzentfarbe, weil dann etwas
+   zu tun ist. */
+.teamcard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  padding: 16px;
+}
+
+.teamcard p { margin: 0; font-size: calc(14px * var(--fs)); color: var(--ink-soft); text-wrap: pretty; }
+
+.teamcard .teamcount {
+  font-size: calc(13px * var(--fs));
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--accent-text);
+}
+
+.teamcard .teamcount::before { content: '🙌 '; }
+.teamcard .teamcount[data-plain]::before { content: none; }
+
+/* Die offene Einladung trägt ihren Knopf selbst: hier geht es los. */
+.challenge .btn { align-self: stretch; }
+
+.teamcard[data-due] {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 2px solid var(--accent);
+}
+
+.teamcard[data-due] [data-slot="teamnote"] {
+  font-size: calc(16px * var(--fs));
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Was-ist-neu-Karte nach einem Update: in Blau, damit sie sich von Team und
+   Push abhebt, und als Ganzes ein Knopf mit Pfeil. Sie springt beim
+   Erscheinen kurz auf, das Geschenk wackelt einmal. */
+.newscard {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--hue-blue);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgb(34 99 131 / 30%);
+  transition: transform 120ms ease, filter 120ms ease;
+  animation: news-pop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.newscard:active { transform: scale(0.98); }
+.newscard:focus-visible { outline: 3px solid var(--hue-blue-lift, #7cbcdc); outline-offset: 3px; }
+
+.newscard-gift {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 18%);
+  font-size: calc(22px * var(--fs));
+  animation: news-wiggle 700ms ease 420ms both;
+}
+
+.newscard-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.newscard-text b { font-size: calc(17px * var(--fs)); }
+.newscard-text small { font-size: calc(14px * var(--fs)); opacity: 0.85; }
+
+/* Der Pfeil zeigt nach rechts: dasselbe Zeichen wie Zurück, gespiegelt. */
+.newscard-go { flex: none; font-size: calc(20px * var(--fs)); transform: scaleX(-1); }
+
+.newscard[data-leaving] { animation: news-out 260ms ease forwards; }
+
+@media (hover: hover) and (pointer: fine) {
+  .newscard:hover { filter: brightness(1.08); }
+}
+
+@keyframes news-pop {
+  0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes news-wiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-14deg) scale(1.1); }
+  50% { transform: rotate(10deg) scale(1.1); }
+  75% { transform: rotate(-6deg); }
+}
+
+@keyframes news-out {
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+/* Was-ist-neu als Overlay: mittig, scrollt in sich, "Gelesen" unten. */
+.news-overlay {
+  width: min(100% - 32px, 460px);
+  max-height: calc(100dvh - 48px);
+  padding: 24px 20px 20px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow), 0 24px 60px rgb(36 31 27 / 25%);
+}
+
+.news-overlay[open] { display: flex; flex-direction: column; gap: 18px; }
+.news-overlay::backdrop { background: rgb(36 31 27 / 45%); }
+.news-overlay h2 { margin: 0; font-size: calc(22px * var(--fs)); }
+.news-overlay .releases { overflow-y: auto; min-height: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .news-overlay[open] { animation: news-pop 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+}
+
+.btn-blue { background: var(--hue-blue); color: #fff; }
+
+/* Neuerungen: pro Release Titel, Tag und eine Liste mit Emoji vorne. */
+.releases { display: flex; flex-direction: column; gap: 24px; }
+.release h3 { margin: 0; font-size: calc(19px * var(--fs)); }
+.release-date { margin: 2px 0 10px; font-size: calc(13px * var(--fs)); color: var(--ink-soft); }
+.release ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.release li {
+  display: grid;
+  grid-template-columns: 1.6em 1fr;
+  gap: 8px;
   font-size: calc(15px * var(--fs));
   text-wrap: pretty;
 }
@@ -672,9 +817,9 @@ body.is-home #app { padding: 0; }
 /* Der Start ist der Bereich, auf den es ankommt: mehr Luft, etwas mehr Ton
    und eine Kante auf beiden Seiten. */
 .screen-home .lp-band-green {
-  background: color-mix(in srgb, var(--band) 16%, var(--surface));
-  border-top-color: color-mix(in srgb, var(--band) 34%, var(--line));
-  border-bottom: 1px solid color-mix(in srgb, var(--band) 34%, var(--line));
+  background: var(--start-bg, color-mix(in srgb, var(--band) 16%, var(--surface)));
+  border-top-color: var(--start-line, color-mix(in srgb, var(--band) 34%, var(--line)));
+  border-bottom: 1px solid var(--start-line, color-mix(in srgb, var(--band) 34%, var(--line)));
 }
 
 /* Das Startband trägt den Kern der App, darum hat es mehr Luft als die
@@ -699,6 +844,24 @@ body.is-home #app { padding: 0; }
 /* Drei Blöcke untereinander: Beschriftung, Bedienelement, bei Bedarf ein
    Hinweis. Keine Karten und keine Trennlinien, der Abstand reicht. */
 .setting { display: flex; flex-direction: column; gap: 10px; }
+
+/* Danger Zone: abgesetzt durch eine Kante in Ziegelrot, der Titel in
+   derselben Farbe. Kein grosser roter Kasten: es soll auffallen, nicht schreien. */
+.setting-danger {
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--tint-brick) 45%, var(--line));
+  border-radius: var(--radius);
+}
+
+.setting-danger .setting-label { color: var(--tint-brick); }
+
+/* Ein Textlink in der Spalte nimmt nur seine Breite, sonst stünde er mittig. */
+.setting > .linkbtn {
+  align-self: flex-start;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .setting-label {
   margin: 0;
@@ -1241,6 +1404,9 @@ body.is-landing #app { padding: 0; }
 /* Löschen steht leise da: ein unterstrichener Link, der erst nachfragt. Wer
    ihn sucht, findet ihn, und sonst fällt er nicht auf. Er steht an beiden
    Orten im Lesefluss, also linksbündig wie alles daneben. */
+.backup { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.backup-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+
 .wipe {
   display: flex;
   flex-direction: column;
@@ -2167,3 +2333,70 @@ body.has-bar .footer { display: none; }
   .party { display: none !important; }
 }
 
+
+/* ------------------------------------------------------------------ Teilen */
+/* Kontextmenü am Knopf, wenn ein Push rausgeht. Position setzt share.js,
+   darum hier kein Rand und kein automatisches Zentrieren des <dialog>. */
+.share-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(260px, 100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow), 0 20px 40px rgb(36 31 27 / 14%);
+}
+
+/* Hintergrund nur angedeutet: es ist ein Menü, kein Dialog. */
+.share-menu::backdrop { background: rgb(36 31 27 / 12%); }
+
+.share-menu [role="menu"] { display: flex; flex-direction: column; }
+
+.share-menu-item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: calc(16px * var(--fs));
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.share-menu-item .icon { font-size: calc(22px * var(--fs)); color: var(--accent-text); }
+
+.share-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.share-menu-item:active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+@media (hover: hover) and (pointer: fine) {
+  .share-menu-item:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+}
+
+.share-menu hr {
+  margin: 4px 8px;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+/* Aufgehen vom Knopf her: von unten, wenn das Menü darüber steht, und umgekehrt. */
+@media (prefers-reduced-motion: no-preference) {
+  .share-menu[open] { animation: menu-in 160ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+  .share-menu[data-side="below"][open] { animation-name: menu-in-below; }
+}
+
+@keyframes menu-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } }
+@keyframes menu-in-below { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }

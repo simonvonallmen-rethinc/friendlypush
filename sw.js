@@ -26,6 +26,8 @@ const SHELL = [
   './manifest.webmanifest',
   './data/slots.js',
   './data/exercises.js',
+  './data/high-five.js',
+  './data/releases.js',
   './lib/store.js',
   './lib/share.js',
   './lib/library.js',

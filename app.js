@@ -1563,7 +1563,6 @@ function nameInput(view) {
   const el = document.createElement('input')
   el.type = 'text'
   el.className = 'peer-input'
-  el.maxLength = 20
   el.autocomplete = 'given-name'
   el.enterKeyHint = 'done'
   el.placeholder = 'Vorname'

@@ -407,6 +407,11 @@ a.btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  /* Ein langer Name macht den Platz breit, aber nie breiter als die Zeile:
+     dann bricht das Paar um, und der Name selbst darf auch umbrechen. */
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   border-radius: 999px;

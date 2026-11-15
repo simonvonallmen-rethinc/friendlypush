@@ -134,7 +134,10 @@ function fillPair(el, people) {
     el.append(peer)
   })
   // Erst im nächsten Frame steht das Paar im Dokument und lässt sich messen.
-  requestAnimationFrame(() => measurePair(el))
+  requestAnimationFrame(() => {
+    for (const input of el.querySelectorAll('.peer-input')) fitInput(input)
+    measurePair(el)
+  })
   watchPairs()
 }
 
@@ -149,8 +152,12 @@ function measurePair(el) {
   // Ohne das Attribut messen, sonst misst man die eigene Wirkung.
   delete el.dataset.stacked
   if (peers.length < 2) return
-  const top = peers[0].offsetTop
-  if (peers.some((peer) => peer.offsetTop !== top)) el.dataset.stacked = ''
+  // Nicht auf gleiche Höhe prüfen: das Feld ist ein paar Pixel höher als ein
+  // Name, mittig ausgerichtet liegen die Plätze dann leicht versetzt, obwohl
+  // sie nebeneinander stehen. Umgebrochen ist erst, was unter dem ersten liegt.
+  const first = peers[0]
+  const bottom = first.offsetTop + first.offsetHeight
+  if (peers.some((peer) => peer.offsetTop >= bottom)) el.dataset.stacked = ''
 }
 
 /**
@@ -1569,6 +1576,9 @@ function nameInput(view) {
   el.addEventListener('input', () => {
     store.setName(el.value)
     syncPush(view)
+    // Der Platz wächst mit dem Namen. Wird er zu breit, bricht das Paar um.
+    fitInput(el)
+    measurePair(view.slots.pair)
   })
   el.addEventListener('change', () => {
     store.setName(el.value)
@@ -1579,6 +1589,23 @@ function nameInput(view) {
     if (!named) shakeName(view)
   })
   return el
+}
+
+let measureCtx = null
+
+/**
+ * Das Feld so breit wie sein Inhalt, leer so breit wie der Platzhalter. Ein
+ * Feld hat von sich aus eine feste Breite; `field-sizing: content` kann nicht
+ * jeder Browser, darum wird mit der echten Schrift gemessen.
+ */
+function fitInput(el) {
+  measureCtx ??= document.createElement('canvas').getContext('2d')
+  const style = getComputedStyle(el)
+  // Aus den Einzelteilen, die Kurzform `font` liefert nicht jeder Browser.
+  measureCtx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+  const text = el.value || el.placeholder
+  // Ein paar Pixel Luft für den Cursor am Ende.
+  el.style.width = `${Math.ceil(measureCtx.measureText(text).width) + 4}px`
 }
 
 /**

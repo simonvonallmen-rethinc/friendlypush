@@ -53,6 +53,9 @@ const HELP_FROM = {
 /** Welcher Screen gerade steht. Das Fragezeichen braucht den Weg zurück. */
 let standing = ''
 
+/** Eine neue Version wartet. "Was ist neu" bietet dann gleich das Neuladen an. */
+let updateReady = false
+
 /** Gerade gelöscht. Überlebt genau eine Neuzeichnung der Übersicht. */
 let wiped = false
 
@@ -906,23 +909,27 @@ function fillReleases(el) {
 }
 
 /**
- * "Was ist neu" als Overlay. Erst "Gelesen" zählt als gelesen; wer es
- * daneben oder mit Escape schliesst, findet die Karte weiter auf der Startseite.
- * @param {() => void} onRead was nach "Gelesen" auf dem Screen verschwinden soll
+ * "Was ist neu" als Overlay. Geöffnet heisst gelesen: beim Schliessen (Kreuz,
+ * daneben tippen, Escape) verschwindet die Karte auf der Startseite. Die
+ * einzige Aktion ist "Neu laden", und nur, wenn eine neue Version wartet.
+ * @param {() => void} onRead was nach dem Schliessen verschwinden soll
  */
 function openNews(onRead) {
   const dlg = document.querySelector('[data-slot="news"]')
   fillReleases(dlg.querySelector('[data-slot="newslist"]'))
-  const readBtn = dlg.querySelector('[data-action="news-read"]')
-  readBtn.onclick = () => {
+  const closeBtn = dlg.querySelector('[data-action="news-close"]')
+  const reloadBtn = dlg.querySelector('[data-action="news-reload"]')
+  reloadBtn.hidden = !updateReady
+  reloadBtn.onclick = () => pwa.applyUpdate()
+  closeBtn.onclick = () => dlg.close()
+  dlg.onclick = (event) => { if (event.target === dlg) dlg.close() }
+  dlg.onclose = () => {
     if (LATEST) store.markReleaseSeen(LATEST)
-    dlg.close()
     onRead?.()
   }
-  dlg.onclick = (event) => { if (event.target === dlg) dlg.close() }
   dlg.showModal()
   dlg.scrollTop = 0
-  readBtn.focus({ preventScroll: true })
+  ;(updateReady ? reloadBtn : closeBtn).focus({ preventScroll: true })
 }
 
 /** Die offene Einladung auf der Startseite: wer gepusht hat, und der Weg zurück auf den Link-Screen. */
@@ -1875,12 +1882,13 @@ function back() {
  * laden wäre ein Abbruch.
  */
 function setupServiceWorker() {
-  const toast = document.querySelector('[data-slot="update"]')
-  toast.querySelector('[data-action="reload"]').addEventListener('click', () => pwa.applyUpdate())
+  const banner = document.querySelector('[data-slot="update"]')
+  banner.querySelector('[data-action="reload"]').addEventListener('click', () => pwa.applyUpdate())
   pwa.register({
     onUpdate: () => {
-      toast.hidden = false
-      // Beide sitzen oben rechts, und die Meldung ist das Wichtigere.
+      updateReady = true
+      banner.hidden = false
+      // Banner und Nebenausgänge sässen beide oben; das Banner ist wichtiger.
       document.body.classList.add('has-toast')
     },
   })
@@ -1938,10 +1946,41 @@ function init() {
     incoming = next
     showInvite()
   })
+  // Auf einem Entwicklungs-Host kommt die Dev-Leiste dazu. Sie wird nur
+  // dort geladen; mit `?devstate=` stellt sie einen Zustand her und
+  // übernimmt den ersten Screen.
+  if (store.isDevHost()) {
+    import('./dev/panel.js').then((dev) => dev.boot(devApi())).catch((err) => console.error(err))
+    if (store.devStateRequested()) return
+  }
   incoming = share.decode()
   if (incoming) showInvite()
   else if (isNewcomer()) showLanding()
   else showHome()
+}
+
+/** Was die Dev-Leiste aufrufen darf. Nur auf Entwicklungs-Hosts in Gebrauch. */
+function devApi() {
+  return {
+    store,
+    share,
+    showHome,
+    showLanding: () => showLanding(showHome),
+    showSettings: () => showSettings(showHome),
+    showLibrary: () => showLibrary(showHome),
+    showDone,
+    openNews: () => openNews(),
+    openLink(payload) {
+      incoming = payload
+      showInvite()
+    },
+    fakeUpdate() {
+      updateReady = true
+      document.querySelector('[data-slot="update"]').hidden = false
+      document.body.classList.add('has-toast')
+    },
+    applyLook: () => applyLook(),
+  }
 }
 
 init()

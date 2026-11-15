@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zustände</title>
+<style>
+  /* Werkzeug, nicht Teil der App. Alle Zustände aus dev/states.js
+     nebeneinander, jeder in einem eigenen Rahmen in Handygrösse. Jeder
+     Rahmen hat seinen eigenen Speicher (?devstate), sie stören sich nicht
+     und fassen die echten Daten nicht an. */
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 16px; background: #2a2a2a; color: #eee; font: 13px system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 16px; }
+  header h1 { margin: 0; font-size: 16px; }
+  header a, header button {
+    padding: 5px 10px; border: 0; border-radius: 6px; background: #444; color: #eee;
+    font: inherit; text-decoration: none; cursor: pointer;
+  }
+  header [data-on] { background: #ffde59; color: #111; }
+  h2 { margin: 24px 0 8px; color: #ffde59; font: 600 12px ui-monospace, monospace; text-transform: uppercase; }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  figure { margin: 0; }
+  figcaption { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  figcaption a { color: #9cf; }
+  .frame { width: calc(390px * var(--s)); height: calc(844px * var(--s)); overflow: hidden; border-radius: 14px; background: #fff; }
+  iframe { width: 390px; height: 844px; border: 0; transform: scale(var(--s)); transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Zustände</h1>
+  <span data-slot="themes"></span>
+  <span data-slot="sizes"></span>
+  <a href="/">Zur App</a>
+</header>
+<main data-slot="groups"></main>
+
+<script type="module">
+  import { STATES } from './states.js'
+
+  const q = new URLSearchParams(location.search)
+  const theme = q.get('theme') ?? ''
+  const scale = Number(q.get('s') ?? 0.5)
+  document.documentElement.style.setProperty('--s', scale)
+
+  const link = (patch) => {
+    const next = new URLSearchParams(q)
+    for (const [k, v] of Object.entries(patch)) v ? next.set(k, v) : next.delete(k)
+    return `?${next}`
+  }
+  const chips = (slot, items, current, key) => {
+    const el = document.querySelector(`[data-slot="${slot}"]`)
+    for (const [value, label] of items) {
+      const a = document.createElement('a')
+      a.textContent = label
+      a.href = link({ [key]: value })
+      if (String(value) === String(current)) a.dataset.on = ''
+      el.append(a, ' ')
+    }
+  }
+  chips('themes', [['', 'Wie gespeichert'], ['light', 'Hell'], ['dark', 'Dunkel']], theme, 'theme')
+  chips('sizes', [['0.4', 'S'], ['0.5', 'M'], ['0.75', 'L']], scale, 's')
+
+  const root = document.querySelector('[data-slot="groups"]')
+  let group = ''
+  let grid = null
+  for (const s of STATES) {
+    if (s.group !== group) {
+      group = s.group
+      const h = document.createElement('h2')
+      h.textContent = group
+      grid = document.createElement('div')
+      grid.className = 'grid'
+      root.append(h, grid)
+    }
+    const src = `/?devstate=${s.id}${theme ? `&devtheme=${theme}` : ''}`
+    const fig = document.createElement('figure')
+    fig.innerHTML = `<figcaption><span></span><a target="_blank">öffnen</a></figcaption><div class="frame"><iframe loading="lazy"></iframe></div>`
+    fig.querySelector('span').textContent = s.label
+    fig.querySelector('a').href = src
+    fig.querySelector('iframe').src = `${src}&devbare=1`
+    fig.querySelector('iframe').title = s.label
+    grid.append(fig)
+  }
+</script>
+</body>
+</html>

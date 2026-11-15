@@ -296,3 +296,12 @@ Alte Links ohne `i` bleiben gültig. Eine Antwort darauf hat kein `a` und deckt 
 - **Nächste Runde.** Am Tag nach einem High Five heisst der Hauptknopf auf dem Abschluss "Ben pushen" und schickt einen Invite mit dem Zählerstand.
 - **Kalender.** Ein Tag mit High Five trägt 🙌 statt Haken.
 - **Texte.** Alle Sätze stehen in `data/high-five.js`, pro Lage eine Liste, pro Tag fest gezogen.
+
+## Zustände fürs Review (Dev-Leiste)
+
+Auf einem Entwicklungs-Host (localhost, `.test`, private IP im WLAN) lädt `app.js` zusätzlich `dev/panel.js`. Unten links steht ein Knopf "DEV" mit allen Zuständen aus `dev/states.js` (Update, Team, Einladung, Abschluss usw.).
+
+- `?devstate=<id>` stellt einen Zustand her. Der Speicher liegt dann nur im Arbeitsspeicher der Seite (`storage()` in `lib/store.js`): die echten Daten bleiben unberührt, mehrere Vorschauen stören sich nicht. "Zu meinen Daten" lädt ohne Parameter.
+- `?devtheme=light|dark` erzwingt das Erscheinungsbild, `?devbare=1` blendet den Knopf aus.
+- `dev/states.html` zeigt alle Zustände nebeneinander in Handygrösse, wahlweise hell oder dunkel.
+- Ein neuer Zustand ist ein Eintrag in `dev/states.js`: Speicherstand (`seed`) und Screen (`show`).

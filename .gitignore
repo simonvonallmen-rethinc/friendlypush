@@ -3,3 +3,4 @@
 .idea
 secrets
 public/prompts/*.md
+.claude/worktrees/

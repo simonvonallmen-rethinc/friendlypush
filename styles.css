@@ -1456,6 +1456,8 @@ body.is-landing #app { padding: 0; }
 /* -------------------------------------------------------- Abschluss */
 .lp-final .lp-cta { width: 100%; }
 
+/* Kaffee-Knopf: Tasse und Text mit Luft dazwischen. */
+.btn-coffee { gap: 10px; }
 /* Die Uhr bringt ihren Rand selbst mit (der Kreis sitzt mit Abstand im
    Rahmen), darum steht der Text hier näher als beim Installationsbild. */
 .lp-final { gap: 0; }
